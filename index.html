@@ -329,16 +329,21 @@
 
     document.addEventListener('DOMContentLoaded', function () {
       slo(true, 'Conectando con la API...');
-      // Cache buster for config fetch
       fetch("/api/report?op=config&cb=" + Date.now())
         .then(function (res) {
-          if (!res.ok) throw new Error("HTTP " + res.status);
+          if (!res.ok) {
+            return res.json().then(function (errObj) {
+              throw new Error(errObj.error || "HTTP " + res.status);
+            }).catch(function () {
+              throw new Error("HTTP " + res.status);
+            });
+          }
           return res.json();
         })
         .then(function (data) { onCfg(data); })
         .catch(function (e) {
           slo(false);
-          eid('empty').innerHTML = '<div class="err-box"><b>Error de Conexión:</b> ' + e.message + '<br><br>Fijate que <b>SHEETS_API_URL</b> esté bien configurada en Vercel.</div>';
+          eid('empty').innerHTML = '<div class="err-box"><b>Error de Conexión:</b> ' + e.message + '</div>';
         });
     });
 
