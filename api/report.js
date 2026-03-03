@@ -9,7 +9,7 @@ const { google } = require('googleapis');
 const METABASE_URL = (process.env.METABASE_URL || "https://bi.decampoacampo.com").replace(/\/$/, "");
 const METABASE_USER = process.env.METABASE_USER || "";
 const METABASE_PASS = process.env.METABASE_PASS || "";
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID || "";
+const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID || "";
 const GOOGLE_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
 const GOOGLE_KEY = process.env.GOOGLE_PRIVATE_KEY || "";
 
@@ -116,8 +116,10 @@ module.exports = async function handler(req, res) {
 // ============ CONFIG (Static or Dynamic) ============
 async function handleConfig(res) {
     if (!sheetsApi || !SPREADSHEET_ID) {
-        // Fallback a herencia de semanas o error
-        return res.status(500).json({ error: "SPREADSHEET_ID o Credenciales Google no configuradas en Vercel" });
+        let missing = [];
+        if (!sheetsApi) missing.push("Credenciales Google (Email/Private Key)");
+        if (!SPREADSHEET_ID) missing.push("GOOGLE_SHEET_ID");
+        return res.status(500).json({ error: "Faltan variables en Vercel: " + missing.join(", ") });
     }
 
     try {
