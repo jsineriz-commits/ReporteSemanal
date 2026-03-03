@@ -48,15 +48,14 @@
 
     .ctrl {
       background: #fff;
-      border-bottom: 1px solid var(--gr200);
-      padding: 12px 20px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      padding: 10px 16px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      flex-wrap: wrap
+      gap: 16px;
+      border-bottom: 1px solid var(--gr200);
+      position: sticky;
+      top: 0;
+      z-index: 100
     }
 
     .ctrl label {
@@ -635,75 +634,138 @@
   <div class="rc">
     <div class="es" id="empty">
       <h3>Cargando...</h3>
-      <p>Solo la primera vez.</p>
+      <p>Configurando reporte v4.4...</p>
     </div>
     <div id="rpt" style="display:none"></div>
   </div>
   <script>
-    var CFG = null, DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'], VERSION = "4.3";
+    // GLOBAL ERROR CATCHER
+    window.onerror = function (message, source, lineno, colno, error) {
+      alert("GLOBAL ERROR DETECTED:\n" + message + "\nLine: " + lineno + "\nSource: " + source);
+      return false;
+    };
+
+    var CFG = null, DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'], VERSION = "4.4";
+
     document.addEventListener('DOMContentLoaded', function () {
       console.log('App Started v' + VERSION);
       slo(true, 'Cargando configuración...');
       fetch("/api/report?op=config")
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
         .then(data => onCfg(data))
         .catch(e => {
-          slo(false); eid('empty').innerHTML = '<div class="err-box"><b>Error de Red:</b> ' + String(e.message || e) + '</div>';
+          console.error(e);
+          slo(false);
+          eid('empty').innerHTML = '<div class="err-box" style="background:#fee2e2;border:2px solid red;padding:20px"><b>Error Fatal de Carga:</b> ' + String(e.message || e) + '<br><br>Por favor, recarga con Ctrl+F5.</div>';
         });
     });
-    function slo(on, txt) { eid('loader').classList.toggle('on', on); if (txt) eid('ltxt').textContent = txt; }
+
+    function slo(on, txt) {
+      var l = eid('loader');
+      if (l) l.classList.toggle('on', !!on);
+      if (txt) eid('ltxt').textContent = txt;
+    }
+
     function eid(id) { return document.getElementById(id); }
+
     function onCfg(data) {
       console.log('onCfg data:', data);
       CFG = data || {};
       slo(false);
       var errBox = eid('empty');
+      if (!errBox) return;
+
       if (CFG.error) {
         errBox.innerHTML = '<div class="err-box"><b>Error del Servidor:</b> ' + String(CFG.error) + '</div>';
         return;
       }
+
       var errH = '';
       if (CFG.errors && Array.isArray(CFG.errors)) {
         errH = '<div class="err-box"><b>Errores detectados:</b>';
-        CFG.errors.forEach(function (e) { errH += '<br>- ' + e; });
+        for (var i = 0; i < CFG.errors.length; i++) {
+          errH += '<br>- ' + CFG.errors[i];
+        }
         errH += '</div>';
       }
+
       var sel = eid('selAC');
-      sel.innerHTML = '<option value="">-- Seleccionar AC --</option>';
-      if (CFG.acs && Array.isArray(CFG.acs)) {
-        CFG.acs.forEach(function (ac) { var o = document.createElement('option'); o.value = ac; o.textContent = ac; sel.appendChild(o); });
-      } else {
-        console.warn('CFG.acs no es un array o no existe');
+      if (sel) {
+        sel.innerHTML = '<option value="">-- Seleccionar AC --</option>';
+        if (CFG.acs && Array.isArray(CFG.acs)) {
+          for (var j = 0; j < CFG.acs.length; j++) {
+            var ac = CFG.acs[j];
+            var o = document.createElement('option');
+            o.value = ac;
+            o.textContent = ac;
+            sel.appendChild(o);
+          }
+        }
       }
+
       popSem();
       errBox.innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Selecciona un AC y una semana (v' + VERSION + ')</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
     }
+
     function popSem() {
-      var sel = eid('selSem'); sel.innerHTML = '';
-      if (!CFG || !CFG.semanas || !Array.isArray(CFG.semanas) || !CFG.semanas.length) { sel.innerHTML = '<option>Sin semanas</option>'; return; }
+      var sel = eid('selSem'); if (!sel) return;
+      sel.innerHTML = '';
+      if (!CFG || !CFG.semanas || !Array.isArray(CFG.semanas) || CFG.semanas.length === 0) {
+        sel.innerHTML = '<option>Sin semanas</option>';
+        return;
+      }
+
       var byY = {};
-      CFG.semanas.forEach(function (s) { var y = s.y || ''; if (!byY[y]) byY[y] = []; byY[y].push(s); });
-      var ys = Object.keys(byY).sort(function (a, b) { return b - a }); var now = Date.now(), best = '';
-      ys.forEach(function (y) {
-        var g = document.createElement('optgroup'); g.label = y || '?';
-        if (byY[y] && Array.isArray(byY[y])) {
-          byY[y].forEach(function (s) { var o = document.createElement('option'); o.textContent = 'Sem ' + s.n + ' (' + fD(s.s) + ' - ' + fD(s.e) + ')'; o.value = s.n + '|' + s.s + '|' + s.e + '|' + y; g.appendChild(o); if (now >= s.s && now <= s.e + 86400000) best = o.value; });
+      for (var k = 0; k < CFG.semanas.length; k++) {
+        var s = CFG.semanas[k];
+        if (!s) continue;
+        var y = s.y || 'S/D';
+        if (!byY[y]) byY[y] = [];
+        byY[y].push(s);
+      }
+
+      var ys = Object.keys(byY).sort(function (a, b) { return b - a });
+      var now = Date.now(), best = '';
+
+      for (var m = 0; m < ys.length; m++) {
+        var year = ys[m];
+        var g = document.createElement('optgroup');
+        g.label = year;
+        var list = byY[year];
+        if (list && Array.isArray(list)) {
+          for (var n = 0; n < list.length; n++) {
+            var sem = list[n];
+            var o = document.createElement('option');
+            o.textContent = 'Sem ' + sem.n + ' (' + fD(sem.s) + ' - ' + fD(sem.e) + ')';
+            o.value = sem.n + '|' + sem.s + '|' + sem.e + '|' + year;
+            g.appendChild(o);
+            if (now >= sem.s && now <= sem.e + 86400000) best = o.value;
+          }
         }
         sel.appendChild(g);
-      });
+      }
       if (best) sel.value = best;
     }
+
     function autoGen() {
       var ac = eid('selAC').value, sv = eid('selSem').value; if (!ac || !sv) return;
       var p = sv.split('|');
 
-      eid('rpt').innerHTML = '<div style="padding:20px;text-align:center;color:var(--gr500);font-size:12px">Cargando datos principales...</div>';
-      eid('rpt').style.display = 'block';
-      eid('empty').style.display = 'none';
+      var rptDiv = eid('rpt');
+      if (rptDiv) {
+        rptDiv.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gr500);font-size:12px">Generando reporte híbrido Metabase/Sheets...</div>';
+        rptDiv.style.display = 'block';
+      }
+      if (eid('empty')) eid('empty').style.display = 'none';
 
-      // Fetch al backend API
       fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2])
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error("API Error " + res.status);
+          return res.json();
+        })
         .then(r => {
           if (r.error) throw new Error(r.error);
           renderCore(r, ac, +p[0], p[3], +p[1], +p[2]);
@@ -711,29 +773,34 @@
           setTimeout(function () { renderExtras(r); }, 100);
         })
         .catch(e => {
-          eid('rpt').innerHTML = '<div class="err-box"><b>Error:</b> ' + String(e.message || e) + '</div>';
+          console.error(e);
+          if (rptDiv) rptDiv.innerHTML = '<div class="err-box"><b>Error de Reporte:</b> ' + String(e.message || e) + '</div>';
         });
     }
-    function fD(d) { if (typeof d === 'number') d = new Date(d); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); }
-    function NN(v) { return v ? v.toLocaleString('es-AR') : '0'; }
+
+    function fD(d) {
+      if (typeof d === 'string' || typeof d === 'number') d = new Date(d);
+      if (!(d instanceof Date) || isNaN(d.getTime())) return "??/??/??";
+      return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    }
+
+    function NN(v) { return (typeof v === 'number') ? v.toLocaleString('es-AR') : '0'; }
     function dc(v) { if (v > 0) return '<span class="chip cg2">+' + v + ' vs ant</span>'; if (v < 0) return '<span class="chip cr">' + v + ' vs ant</span>'; return '<span class="chip cbl">= vs ant</span>'; }
     function dcC(v) { var st = 'style="font-size:10px;font-weight:700"'; if (v > 0) return '<span ' + st + '>+' + v + ' vs sem. ant</span>'; if (v < 0) return '<span ' + st + '>' + v + ' vs sem. ant</span>'; return '<span ' + st + '>0 vs sem. ant</span>'; }
 
     function renderCore(d, ac, sem, anio, sT, eT) {
-      var c = eid('rpt');
+      var c = eid('rpt'); if (!c) return;
       var tot = (d.trop || 0);
       var bc = 'bb', bt = 'Semana BUENA'; if (tot < 3) { bc = 'bba'; bt = 'Semana BAJA'; } else if (tot < 8) { bc = 'br'; bt = 'Semana REGULAR'; }
       var cabConc = (d.cabV || 0) + (d.cabC || 0);
       var ccc = d.ccc || '0%';
 
       var h = '';
-      // HEADER
       h += '<div class="rh"><div class="rht"><div><div class="rt"><span class="dot"></span>Reporte semanal &mdash; ' + ac + '</div>';
-      h += '<div class="rsub">Oferta, concrecion, CRM y gestion en campo.</div>';
+      h += '<div class="rsub">Oferta, concreción y CRM consolidado (Vercel).</div>';
       h += '<div class="rmeta"><span class="mt">SEMANA ' + sem + ' &middot; ' + anio + '</span><span class="mt">' + fD(sT) + ' al ' + fD(eT) + '</span></div>';
       h += '</div><div class="badge ' + bc + '">' + bt + '</div></div></div>';
 
-      // BIG KPIs
       h += '<div class="kpi-row"><div class="kpi-big"><div class="kl">Cabezas Ofrecidas</div><div class="kv">' + NN(d.cab) + '</div>';
       h += '<div class="kmeta">' + (d.trop || 0) + ' tropas &middot; ' + (d.socOf || 0) + ' sociedades &middot; ' + ccc + ' CCC</div>';
       h += '<div class="kmeta">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>';
@@ -741,7 +808,6 @@
       h += '<div class="ksplit">' + NN(d.cabV) + ' venta &middot; ' + NN(d.cabC) + ' compra</div>';
       h += '<div class="kmeta">' + (d.trConc || 0) + ' tropas &middot; ' + (d.socOps || 0) + ' soc &middot; ' + dc(cabConc - (d.pConc || 0)) + '</div></div></div>';
 
-      // SMALL KPIs (Initial placeholders)
       h += '<div class="kpi-sm-row" id="sm-kpis">';
       h += ksm('Soc. Gestionadas', '...', 'Cargando...');
       h += ksm('Cargas', (d.carg || 0), (d.cargProp || 0) + ' propias<br>' + (d.cargAjen || 0) + ' ajenas');
@@ -750,18 +816,12 @@
       h += ksm('Soc. Sin Gestion', '...', 'Cargando...');
       h += '</div>';
 
-      // CHART
-      h += '<div class="sec"><div class="sh"><span class="st">Actividades Diarias</span><span class="stag">Por dia</span></div>';
+      h += '<div class="sec"><div class="sh"><span class="st">Actividades Diarias</span><span class="stag">Por día</span></div>';
       h += '<div class="chart-legend"><div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>Tropas</div><div class="leg-item" id="sa-leg" style="display:none"><div class="leg-dot" style="background:#2563eb"></div>SACs</div></div>';
       h += '<div class="chart-box"><canvas id="chartD"></canvas></div></div>';
 
-      // TOP 5
       h += '<div class="sec"><div class="sh"><span class="st">Top 5 Negocios</span><span class="stag">Operaciones</span><span class="sd">Por cantidad (Q)</span></div><div class="tw">' + tblOps(d.top5) + '</div></div>';
-
-      // Section for CRM
       h += '<div id="crm-section"><div class="sec" style="text-align:center;padding:40px;color:var(--gr400)">Cargando sección CRM...</div></div>';
-
-      // Section for EXTRAS (SACs)
       h += '<div id="extras-section"></div>';
 
       c.innerHTML = h;
@@ -770,9 +830,8 @@
     }
 
     function renderCRM(d) {
-      // Update small kpi
       var kpiBox = eid('sm-kpis');
-      if (kpiBox) {
+      if (kpiBox && kpiBox.children && kpiBox.children.length >= 5) {
         kpiBox.children[0].innerHTML = '<div class="kl">Soc. Gestionadas</div><div class="kv">' + (d.tSG || 0) + '</div><div class="kmeta">' + (d.com || 0) + ' comentarios<br>' + (d.age || 0) + ' agendas<br>' + (d.nuevas || 0) + ' nuevas</div>';
         kpiBox.children[4].innerHTML = '<div class="kl">Soc. Sin Gestion</div><div class="kv">' + (d.socSinGestNum || 0) + '</div><div class="kmeta">Pendientes de contacto</div>';
       }
@@ -789,28 +848,30 @@
       h += '<div class="crm-tables">';
       h += '<div><div style="font-size:12px;color:var(--gr800);margin-bottom:8px">Top 5 Sociedades sin gestión</div>';
       h += '<div class="tw"><table><thead><tr><th>Kt</th><th>Kv</th><th>Usuario - Sociedad</th><th>Fecha Asig.</th><th>Fuente</th><th>Ult. Gestión</th><th>Ult Act.</th><th>Sin gestión</th></tr></thead><tbody>';
-      if (d.ssgTop5 && d.ssgTop5.length) {
-        d.ssgTop5.forEach(function (s) {
+      if (d.ssgTop5 && Array.isArray(d.ssgTop5) && d.ssgTop5.length) {
+        for (var i = 0; i < d.ssgTop5.length; i++) {
+          var s = d.ssgTop5[i];
           var kt = s.kt ? '<span class="kt-tag">' + s.kt + '</span>' : '';
           var kv = s.kv ? '<span class="kt-tag" style="background:#a58c67">' + s.kv + '</span>' : '';
           var sg = s.sg ? '<span style="color:#991b1b;font-weight:600">' + s.sg + '</span>' : '';
           var ua = s.ua ? '<span style="color:#c2410c">' + s.ua + '</span>' : '';
           var ug = s.ug || '-';
           h += '<tr><td>' + kt + '</td><td>' + kv + '</td><td class="tdb">' + s.soc + '</td><td>' + s.fa + '</td><td>' + s.fu + '</td><td style="font-size:10px">' + ug + '</td><td style="font-size:10px">' + ua + '</td><td style="font-size:10px">' + sg + '</td></tr>';
-        });
+        }
       } else { h += '<tr><td colspan="8" class="empty-t">Sin datos</td></tr>'; }
       h += '</tbody></table></div></div>';
       h += '<div class="crm-tables-hz-line"></div>';
       h += '<div><div style="font-size:12px;color:var(--gr800);margin-bottom:8px">Actividad Semanal</div>';
       h += '<div class="tw"><table><thead><tr><th>Kt</th><th>Kv</th><th>Usuario - Sociedad</th><th>Fecha Asig.</th><th>Fuente</th><th>Ult. Gestión</th><th>Ult Act.</th></tr></thead><tbody>';
-      if (d.actSemanal && d.actSemanal.length) {
-        d.actSemanal.forEach(function (s) {
-          var kt = s.kt ? '<span class="kt-tag">' + s.kt + '</span>' : '';
-          var kv = s.kv ? '<span class="kt-tag" style="background:#a58c67">' + s.kv + '</span>' : '';
-          var ua = s.ua ? '<span style="color:#c2410c">' + s.ua + '</span>' : '';
-          var ug = s.ug || '-';
-          h += '<tr><td>' + kt + '</td><td>' + kv + '</td><td class="tdb">' + s.soc + '</td><td>' + s.fa + '</td><td>' + s.fu + '</td><td style="font-size:10px">' + ug + '</td><td style="font-size:10px">' + ua + '</td></tr>';
-        });
+      if (d.actSemanal && Array.isArray(d.actSemanal) && d.actSemanal.length) {
+        for (var j = 0; j < d.actSemanal.length; j++) {
+          var s2 = d.actSemanal[j];
+          var kt2 = s2.kt ? '<span class="kt-tag">' + s2.kt + '</span>' : '';
+          var kv2 = s2.kv ? '<span class="kt-tag" style="background:#a58c67">' + s2.kv + '</span>' : '';
+          var ua2 = s2.ua ? '<span style="color:#c2410c">' + s2.ua + '</span>' : '';
+          var ug2 = s2.ug || '-';
+          h += '<tr><td>' + kt2 + '</td><td>' + kv2 + '</td><td class="tdb">' + s2.soc + '</td><td>' + s2.fa + '</td><td>' + s2.fu + '</td><td style="font-size:10px">' + ug2 + '</td><td style="font-size:10px">' + ua2 + '</td></tr>';
+        }
       } else { h += '<tr><td colspan="7" class="empty-t">Sin actividad esta semana</td></tr>'; }
       h += '</tbody></table></div></div>';
       h += '</div></div></div>';
@@ -819,59 +880,73 @@
     }
 
     function renderExtras(d) {
-      // Update small kpi
       var kpiBox = eid('sm-kpis');
-      if (kpiBox) {
+      if (kpiBox && kpiBox.children && kpiBox.children.length >= 4) {
         kpiBox.children[2].innerHTML = '<div class="kl">SACs</div><div class="kv">' + (d.sacs ? d.sacs.length : 0) + '</div><div class="kmeta">' + dc((d.sacs ? d.sacs.length : 0) - (d.pSac || 0)) + '</div>';
         kpiBox.children[3].innerHTML = '<div class="kl">Remates</div><div class="kv">' + (d.rem || 0) + '</div><div class="kmeta">' + dc((d.rem || 0) - (d.pRem || 0)) + '</div>';
       }
 
       var h = '';
-      if (d.sacs && d.sacs.length) {
-        h += '<div class="sec"><div class="sh"><span class="st">SACs Solicitados</span><span class="stag">Credito</span></div>';
+      if (d.sacs && Array.isArray(d.sacs) && d.sacs.length) {
+        h += '<div class="sec"><div class="sh"><span class="st">SACs Solicitados</span><span class="stag">Crédito</span></div>';
         h += '<div class="tw"><table><thead><tr><th>Sociedad</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>';
-        d.sacs.forEach(function (s) { h += '<tr><td class="tdb">' + s.s + '</td><td>' + fD(s.f) + '</td><td>' + s.e + '</td></tr>'; });
+        for (var i = 0; i < d.sacs.length; i++) {
+          var s = d.sacs[i];
+          h += '<tr><td class="tdb">' + s.s + '</td><td>' + fD(s.f) + '</td><td>' + s.e + '</td></tr>';
+        }
         h += '</tbody></table></div></div>';
       }
-      eid('extras-section').innerHTML = h;
-      eid('sa-leg').style.display = 'flex';
+      var eSec = eid('extras-section');
+      if (eSec) eSec.innerHTML = h;
+      var saLeg = eid('sa-leg');
+      if (saLeg) saLeg.style.display = 'flex';
 
-      // Update Chart with SACs
       if (window.CORE_DATA && d.sacs && Array.isArray(d.sacs)) {
         var saData = [0, 0, 0, 0, 0, 0, 0];
-        d.sacs.forEach(function (s) {
-          var f = new Date(s.f);
+        for (var j = 0; j < d.sacs.length; j++) {
+          var f = new Date(d.sacs[j].f);
           var idx = f.getDay() === 0 ? 6 : f.getDay() - 1;
           saData[idx]++;
-        });
+        }
         drawChart(window.CORE_DATA.dT, saData);
       }
     }
+
     function ksm(l, v, m) { return '<div class="kpi-sm"><div class="kl">' + l + '</div><div class="kv">' + v + '</div><div class="kmeta">' + m + '</div></div>'; }
+
     function tblOps(ops) {
-      if (!ops || !ops.length) return '<div class="empty-t">Sin operaciones</div>';
+      if (!ops || !Array.isArray(ops) || ops.length === 0) return '<div class="empty-t">Sin operaciones</div>';
       var h = '<table><thead><tr><th>ID</th><th>UN</th><th>Soc. Vendedora</th><th>Fecha</th><th>Q</th><th>Cat</th><th>Soc. Compradora</th></tr></thead><tbody>';
-      ops.forEach(function (o) {
+      for (var i = 0; i < ops.length; i++) {
+        var o = ops[i];
+        if (!o || !o.d) continue;
         var r = o.d;
-        // 0=A(ID), 1=B(UN), 2=F(SocV), 3=G(ACV), 4=H(SocC), 5=I(ACC), 6=C(Fecha), 7=J(Q), 8=W(Carga), 9=U(Obs), 10=K(Cat)
         h += '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td class="tdb">' + r[2] + '</td><td>' + r[6] + '</td><td style="font-weight:700">' + NN(r[7]) + '</td><td>' + r[10] + '</td><td class="tdb">' + r[4] + '</td></tr>';
-      });
+      }
       return h + '</tbody></table>';
     }
+
     function drawChart(tr, sa) {
-      var cv = document.getElementById('chartD'); if (!cv) return; var ctx = cv.getContext('2d');
-      var W = cv.parentElement.offsetWidth, H = cv.parentElement.offsetHeight; cv.width = W * 2; cv.height = H * 2; cv.style.width = W + 'px'; cv.style.height = H + 'px'; ctx.scale(2, 2);
-      var mx = Math.max.apply(null, tr.concat(sa)) || 1; mx = Math.ceil(mx * 1.2) || 1;
-      var p = { t: 10, r: 20, b: 28, l: 30 }, cW = W - p.l - p.r, cH = H - p.t - p.b, bW = cW / 7, bw = bW * .28;
-      ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = .5;
-      for (var i = 0; i <= 4; i++) { var y = p.t + cH - (cH / 4) * i; ctx.beginPath(); ctx.moveTo(p.l, y); ctx.lineTo(W - p.r, y); ctx.stroke(); ctx.fillStyle = '#9ca3af'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right'; ctx.fillText(Math.round(mx / 4 * i), p.l - 5, y + 3); }
-      for (var i = 0; i < 7; i++) { var cx = p.l + bW * i + bW / 2; var h1 = (tr[i] / mx) * cH; ctx.fillStyle = '#10b981'; ctx.fillRect(cx - bw - 1, p.t + cH - h1, bw, h1); var h2 = (sa[i] / mx) * cH; ctx.fillStyle = '#2563eb'; ctx.fillRect(cx + 1, p.t + cH - h2, bw, h2); ctx.fillStyle = '#6b7280'; ctx.font = '9px DM Sans'; ctx.textAlign = 'center'; ctx.fillText(DIAS[i], cx, H - p.b + 14); }
+      try {
+        var cv = eid('chartD'); if (!cv) return; var ctx = cv.getContext('2d');
+        var W = cv.parentElement.offsetWidth, H = cv.parentElement.offsetHeight; cv.width = W * 2; cv.height = H * 2; cv.style.width = W + 'px'; cv.style.height = H + 'px'; ctx.scale(2, 2);
+        var merged = (tr || []).concat(sa || []);
+        var mx = 1;
+        for (var i = 0; i < merged.length; i++) if (merged[i] > mx) mx = merged[i];
+        mx = Math.ceil(mx * 1.2) || 1;
+        var p = { t: 10, r: 20, b: 28, l: 30 }, cW = W - p.l - p.r, cH = H - p.t - p.b, bW = cW / 7, bw = bW * .28;
+        ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = .5;
+        for (var i = 0; i <= 4; i++) { var y = p.t + cH - (cH / 4) * i; ctx.beginPath(); ctx.moveTo(p.l, y); ctx.lineTo(W - p.r, y); ctx.stroke(); ctx.fillStyle = '#9ca3af'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right'; ctx.fillText(Math.round(mx / 4 * i), p.l - 5, y + 3); }
+        for (var i = 0; i < 7; i++) { var cx = p.l + bW * i + bW / 2; var h1 = ((tr && tr[i] ? tr[i] : 0) / mx) * cH; ctx.fillStyle = '#10b981'; ctx.fillRect(cx - bw - 1, p.t + cH - h1, bw, h1); var h2 = ((sa && sa[i] ? sa[i] : 0) / mx) * cH; ctx.fillStyle = '#2563eb'; ctx.fillRect(cx + 1, p.t + cH - h2, bw, h2); ctx.fillStyle = '#6b7280'; ctx.font = '9px DM Sans'; ctx.textAlign = 'center'; ctx.fillText(DIAS[i], cx, H - p.b + 14); }
+      } catch (e) { console.error("Chart error:", e); }
     }
+
     function exportPDF() {
-      if (!eid('rpt').innerHTML) return; var el = eid('rpt');
+      var rpt = eid('rpt'); if (!rpt || !rpt.innerHTML) return;
       var ac = eid('selAC').value || 'Reporte', p = eid('selSem').value.split('|');
       eid('ctrlBar').style.display = 'none';
-      html2pdf().set({ margin: [5, 5, 5, 5], filename: 'Reporte_' + ac.replace(/\s+/g, '_') + '_S' + p[0] + '.pdf', image: { type: 'jpeg', quality: .95 }, html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['avoid-all'] } }).from(el).save().then(function () { eid('ctrlBar').style.display = ''; });
+      if (typeof html2pdf === 'undefined') { alert("Error: Librería PDF no cargada."); eid('ctrlBar').style.display = ''; return; }
+      html2pdf().set({ margin: [5, 5, 5, 5], filename: 'Reporte_' + ac.replace(/\s+/g, '_') + '_S' + p[0] + '.pdf', image: { type: 'jpeg', quality: .95 }, html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['avoid-all'] } }).from(rpt).save().then(function () { eid('ctrlBar').style.display = ''; });
     }
   </script>
 </body>
