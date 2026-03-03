@@ -3,10 +3,10 @@
  * Fuentes: Metabase (BASE, OPS) + Google Sheets Web App (CRM, SAC, REMATES)
  */
 
-const METABASE_URL = process.env.METABASE_URL || "https://bi.decampoacampo.com";
+const METABASE_URL = (process.env.METABASE_URL || "https://bi.decampoacampo.com").replace(/\/$/, "");
 const METABASE_USER = process.env.METABASE_USER || "";
 const METABASE_PASS = process.env.METABASE_PASS || "";
-const SHEETS_API_URL = process.env.SHEETS_API_URL || ""; // URL de tu Web App de Apps Script
+const SHEETS_API_URL = (process.env.SHEETS_API_URL || "");
 
 // ============ METABASE AUTH ============
 async function getMetabaseSession() {
@@ -15,9 +15,12 @@ async function getMetabaseSession() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: METABASE_USER, password: METABASE_PASS })
     });
-    if (!res.ok) throw new Error("Metabase auth failed: " + res.status);
+    if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Metabase auth failed (${res.status}): ${txt.slice(0, 100)}`);
+    }
     const data = await res.json();
-    return data.id; // session token
+    return data.id;
 }
 
 async function queryCard(sessionId, cardId) {
