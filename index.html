@@ -641,11 +641,9 @@
   </div>
   <script>
     var CFG = null, DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-    const API_URL = "URL_DE_TU_WEB_APP_AQUI"; // REEMPLAZAR POR EL LINK DE APPS SCRIPT
-
     document.addEventListener('DOMContentLoaded', function () {
       slo(true, 'Cargando lista de ACs y semanas...');
-      fetch(API_URL + "?api=true&op=config")
+      fetch("/api/report?op=config")
         .then(res => res.json())
         .then(data => onCfg(data))
         .catch(e => {
@@ -682,7 +680,7 @@
       eid('empty').style.display = 'none';
 
       // Fetch al backend API
-      fetch(API_URL + "?api=true&op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2])
+      fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2])
         .then(res => res.json())
         .then(r => {
           if (r.error) throw new Error(r.error);
