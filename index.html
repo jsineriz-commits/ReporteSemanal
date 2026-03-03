@@ -654,11 +654,23 @@
     function eid(id) { return document.getElementById(id); }
     function onCfg(data) {
       CFG = data; slo(false);
-      var errH = ''; if (CFG.errors && CFG.errors.length) { errH = '<div class="err-box"><b>Errores:</b>'; CFG.errors.forEach(function (e) { errH += '<br>- ' + e; }); errH += '</div>'; }
-      var sel = eid('selAC'); sel.innerHTML = '<option value="">-- Seleccionar AC --</option>';
-      CFG.acs.forEach(function (ac) { var o = document.createElement('option'); o.value = ac; o.textContent = ac; sel.appendChild(o); });
+      if (CFG.error) {
+        eid('empty').innerHTML = '<div class="err-box"><b>Error del Servidor:</b> ' + String(CFG.error) + '</div>';
+        return;
+      }
+      var errH = '';
+      if (CFG.errors && Array.isArray(CFG.errors) && CFG.errors.length) {
+        errH = '<div class="err-box"><b>Errores detectados:</b>';
+        CFG.errors.forEach(function (e) { errH += '<br>- ' + e; });
+        errH += '</div>';
+      }
+      var sel = eid('selAC');
+      sel.innerHTML = '<option value="">-- Seleccionar AC --</option>';
+      if (CFG.acs && Array.isArray(CFG.acs)) {
+        CFG.acs.forEach(function (ac) { var o = document.createElement('option'); o.value = ac; o.textContent = ac; sel.appendChild(o); });
+      }
       popSem();
-      eid('empty').innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Selecciona un AC y una semana</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automaticamente.</p>';
+      eid('empty').innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Selecciona un AC y una semana</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
     }
     function popSem() {
       var sel = eid('selSem'); sel.innerHTML = ''; if (!CFG || !CFG.semanas || !CFG.semanas.length) { sel.innerHTML = '<option>Sin semanas</option>'; return; }

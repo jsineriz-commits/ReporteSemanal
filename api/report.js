@@ -83,11 +83,19 @@ module.exports = async function handler(req, res) {
 // ============ CONFIG (from Sheets) ============
 async function handleConfig(res) {
     if (!SHEETS_API_URL) {
-        return res.status(500).json({ error: "SHEETS_API_URL no configurada en variables de entorno" });
+        return res.status(500).json({ error: "SHEETS_API_URL no configurada en variables de entorno de Vercel" });
     }
-    const r = await fetch(`${SHEETS_API_URL}?api=true&op=config`);
-    const data = await r.json();
-    return res.status(200).json(data);
+    try {
+        const r = await fetch(`${SHEETS_API_URL}?api=true&op=config`);
+        if (!r.ok) {
+            const txt = await r.text();
+            return res.status(500).json({ error: `La Web App de Google Sheets respondió con error (${r.status}): ${txt.slice(0, 100)}` });
+        }
+        const data = await r.json();
+        return res.status(200).json(data);
+    } catch (e) {
+        return res.status(500).json({ error: "Error de conexión con Google Sheets: " + e.message });
+    }
 }
 
 // ============ REPORT (Hybrid) ============
