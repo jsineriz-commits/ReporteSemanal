@@ -640,26 +640,30 @@
     <div id="rpt" style="display:none"></div>
   </div>
   <script>
-    var CFG = null, DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    var CFG = null, DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'], VERSION = "4.3";
     document.addEventListener('DOMContentLoaded', function () {
-      slo(true, 'Cargando lista de ACs y semanas...');
+      console.log('App Started v' + VERSION);
+      slo(true, 'Cargando configuración...');
       fetch("/api/report?op=config")
         .then(res => res.json())
         .then(data => onCfg(data))
         .catch(e => {
-          slo(false); eid('empty').innerHTML = '<div class="err-box"><b>Error:</b> ' + String(e.message || e) + '</div>';
+          slo(false); eid('empty').innerHTML = '<div class="err-box"><b>Error de Red:</b> ' + String(e.message || e) + '</div>';
         });
     });
     function slo(on, txt) { eid('loader').classList.toggle('on', on); if (txt) eid('ltxt').textContent = txt; }
     function eid(id) { return document.getElementById(id); }
     function onCfg(data) {
-      CFG = data; slo(false);
+      console.log('onCfg data:', data);
+      CFG = data || {};
+      slo(false);
+      var errBox = eid('empty');
       if (CFG.error) {
-        eid('empty').innerHTML = '<div class="err-box"><b>Error del Servidor:</b> ' + String(CFG.error) + '</div>';
+        errBox.innerHTML = '<div class="err-box"><b>Error del Servidor:</b> ' + String(CFG.error) + '</div>';
         return;
       }
       var errH = '';
-      if (CFG.errors && Array.isArray(CFG.errors) && CFG.errors.length) {
+      if (CFG.errors && Array.isArray(CFG.errors)) {
         errH = '<div class="err-box"><b>Errores detectados:</b>';
         CFG.errors.forEach(function (e) { errH += '<br>- ' + e; });
         errH += '</div>';
@@ -668,17 +672,23 @@
       sel.innerHTML = '<option value="">-- Seleccionar AC --</option>';
       if (CFG.acs && Array.isArray(CFG.acs)) {
         CFG.acs.forEach(function (ac) { var o = document.createElement('option'); o.value = ac; o.textContent = ac; sel.appendChild(o); });
+      } else {
+        console.warn('CFG.acs no es un array o no existe');
       }
       popSem();
-      eid('empty').innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Selecciona un AC y una semana</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
+      errBox.innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Selecciona un AC y una semana (v' + VERSION + ')</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
     }
     function popSem() {
-      var sel = eid('selSem'); sel.innerHTML = ''; if (!CFG || !CFG.semanas || !CFG.semanas.length) { sel.innerHTML = '<option>Sin semanas</option>'; return; }
-      var byY = {}; CFG.semanas.forEach(function (s) { var y = s.y || ''; if (!byY[y]) byY[y] = []; byY[y].push(s); });
+      var sel = eid('selSem'); sel.innerHTML = '';
+      if (!CFG || !CFG.semanas || !Array.isArray(CFG.semanas) || !CFG.semanas.length) { sel.innerHTML = '<option>Sin semanas</option>'; return; }
+      var byY = {};
+      CFG.semanas.forEach(function (s) { var y = s.y || ''; if (!byY[y]) byY[y] = []; byY[y].push(s); });
       var ys = Object.keys(byY).sort(function (a, b) { return b - a }); var now = Date.now(), best = '';
       ys.forEach(function (y) {
         var g = document.createElement('optgroup'); g.label = y || '?';
-        byY[y].forEach(function (s) { var o = document.createElement('option'); o.textContent = 'Sem ' + s.n + ' (' + fD(s.s) + ' - ' + fD(s.e) + ')'; o.value = s.n + '|' + s.s + '|' + s.e + '|' + y; g.appendChild(o); if (now >= s.s && now <= s.e + 86400000) best = o.value; });
+        if (byY[y] && Array.isArray(byY[y])) {
+          byY[y].forEach(function (s) { var o = document.createElement('option'); o.textContent = 'Sem ' + s.n + ' (' + fD(s.s) + ' - ' + fD(s.e) + ')'; o.value = s.n + '|' + s.s + '|' + s.e + '|' + y; g.appendChild(o); if (now >= s.s && now <= s.e + 86400000) best = o.value; });
+        }
         sel.appendChild(g);
       });
       if (best) sel.value = best;
@@ -827,7 +837,7 @@
       eid('sa-leg').style.display = 'flex';
 
       // Update Chart with SACs
-      if (window.CORE_DATA) {
+      if (window.CORE_DATA && d.sacs && Array.isArray(d.sacs)) {
         var saData = [0, 0, 0, 0, 0, 0, 0];
         d.sacs.forEach(function (s) {
           var f = new Date(s.f);
