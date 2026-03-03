@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+<!-- VERSION 4.5.1 - CACHE BUSTER REWRITE -->
 
 <head>
   <base target="_top">
@@ -52,7 +53,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      border-bottom: 1px solid var(--gr200);
+      border-bottom: 2px solid #fde047;
       position: sticky;
       top: 0;
       z-index: 100
@@ -73,26 +74,7 @@
       border: 1.5px solid var(--gr200);
       border-radius: var(--rs);
       background: #fff;
-      color: var(--gr800);
       cursor: pointer
-    }
-
-    .ctrl select:focus {
-      outline: none;
-      border-color: var(--g500)
-    }
-
-    .cg {
-      display: flex;
-      align-items: center;
-      gap: 5px
-    }
-
-    .sep {
-      width: 1px;
-      height: 24px;
-      background: var(--gr200);
-      margin: 0 2px
     }
 
     .btn {
@@ -105,22 +87,10 @@
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 4px
-    }
-
-    .bs {
+      gap: 4px;
       background: #fff;
       color: var(--gr700);
       border: 1.5px solid var(--gr200)
-    }
-
-    .bs:hover {
-      background: var(--gr50)
-    }
-
-    .bs:disabled {
-      opacity: .4;
-      cursor: not-allowed
     }
 
     .mla {
@@ -139,7 +109,8 @@
       box-shadow: var(--sh);
       padding: 20px 24px;
       margin-bottom: 14px;
-      border-left: 4px solid var(--g500)
+      border-left: 4px solid var(--g500);
+      border: 3px solid #fde047
     }
 
     .rht {
@@ -167,12 +138,6 @@
       background: var(--g500)
     }
 
-    .rsub {
-      font-size: 11px;
-      color: var(--gr500);
-      margin-top: 2px
-    }
-
     .rmeta {
       display: flex;
       gap: 6px;
@@ -189,31 +154,6 @@
       border-radius: 16px;
       background: var(--gr100);
       color: var(--gr600)
-    }
-
-    .badge {
-      padding: 4px 12px;
-      border-radius: 16px;
-      font-size: 11px;
-      font-weight: 700
-    }
-
-    .bb {
-      background: var(--g50);
-      color: var(--g700);
-      border: 1px solid var(--g200)
-    }
-
-    .br {
-      background: var(--o50);
-      color: #c2410c;
-      border: 1px solid #fed7aa
-    }
-
-    .bba {
-      background: var(--r50);
-      color: var(--r600);
-      border: 1px solid #fee2e2
     }
 
     .sec {
@@ -239,23 +179,6 @@
       color: var(--gr900)
     }
 
-    .stag {
-      font-size: 8px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--g600);
-      background: var(--g50);
-      padding: 2px 8px;
-      border-radius: 16px
-    }
-
-    .sd {
-      font-size: 10px;
-      color: var(--gr400);
-      margin-left: auto
-    }
-
     .kpi-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -271,61 +194,12 @@
       box-shadow: var(--sh)
     }
 
-    .kpi-big .kl {
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      color: var(--gr400);
-      margin-bottom: 4px
-    }
-
     .kpi-big .kv {
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 36px;
       font-weight: 800;
       color: var(--gr900);
       line-height: 1
-    }
-
-    .kpi-big .ksplit {
-      font-size: 11px;
-      color: var(--gr500);
-      margin-top: 4px
-    }
-
-    .kpi-big .kmeta {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-      font-size: 11px;
-      color: var(--gr500)
-    }
-
-    .chip {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 7px;
-      border-radius: 10px;
-      display: inline-flex;
-      align-items: center;
-      gap: 2px
-    }
-
-    .cg2 {
-      background: var(--g50);
-      color: var(--g700)
-    }
-
-    .cr {
-      background: var(--r50);
-      color: var(--r600)
-    }
-
-    .cbl {
-      background: var(--b50);
-      color: var(--b600)
     }
 
     .kpi-sm-row {
@@ -339,17 +213,7 @@
       border: 1.5px solid var(--gr200);
       border-radius: var(--rs);
       padding: 12px 14px;
-      background: #fff;
-      box-shadow: var(--sh)
-    }
-
-    .kpi-sm .kl {
-      font-size: 8px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      color: var(--gr400);
-      margin-bottom: 3px
+      background: #fff
     }
 
     .kpi-sm .kv {
@@ -360,36 +224,10 @@
       line-height: 1
     }
 
-    .kpi-sm .kmeta {
-      font-size: 9px;
-      color: var(--gr500);
-      margin-top: 5px
-    }
-
     .chart-box {
       position: relative;
       height: 170px;
       margin: 8px 0
-    }
-
-    .chart-legend {
-      display: flex;
-      gap: 14px;
-      margin-bottom: 4px
-    }
-
-    .leg-item {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--gr600)
-    }
-
-    .leg-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 2px
     }
 
     .tw {
@@ -406,7 +244,6 @@
       font-size: 8px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .7px;
       color: var(--gr400);
       text-align: left;
       padding: 7px 8px;
@@ -419,121 +256,21 @@
       color: var(--gr700)
     }
 
-    tbody tr:last-child td {
-      border-bottom: none
-    }
-
-    tbody tr:hover td {
-      background: var(--gr50)
-    }
-
-    .tdb {
-      font-weight: 600;
-      color: var(--gr900)
-    }
-
-    .empty-t {
-      text-align: center;
-      padding: 16px;
-      color: var(--gr400);
-      font-size: 12px
-    }
-
-    .warn-row {
-      background: #fffbeb
-    }
-
     .err-box {
       background: #fef2f2;
-      border: 1px solid #fecaca;
+      border: 2px solid #ef4444;
       border-radius: var(--rs);
-      padding: 12px 16px;
+      padding: 16px;
       margin-bottom: 14px;
-      font-size: 12px;
+      font-size: 14px;
       color: #991b1b
-    }
-
-    .err-box b {
-      display: block;
-      margin-bottom: 4px
-    }
-
-    .crm-layout {
-      display: grid;
-      grid-template-columns: 160px 1fr;
-      gap: 20px;
-    }
-
-    .crm-boxes {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .crm-box {
-      border: 1.5px solid var(--gr600);
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .crm-box .b-title {
-      font-size: 11px;
-      padding: 6px;
-      font-weight: 500;
-      text-transform: uppercase;
-      color: var(--gr800);
-      text-align: center;
-      border-bottom: 1px solid var(--gr200);
-      margin-bottom: 6px;
-    }
-
-    .crm-box .b-val {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 28px;
-      font-weight: 600;
-      color: var(--gr900);
-      display: flex;
-      align-items: baseline;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .crm-box .b-vs {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--gr900);
-    }
-
-    .crm-tables {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .crm-tables-hz-line {
-      border-bottom: 1px dashed var(--gr600);
-      margin: 4px 0;
-    }
-
-    .kt-tag {
-      background: #bca06e;
-      color: #fff;
-      padding: 2px 6px;
-      border-radius: 2px;
-      font-size: 10px;
-      font-weight: 700;
-      text-align: center;
-      display: inline-block;
-      min-width: 36px;
     }
 
     .lo {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(255, 255, 255, .88);
-      backdrop-filter: blur(4px);
+      background: rgba(255, 255, 255, .9);
       z-index: 200;
       justify-content: center;
       align-items: center;
@@ -559,191 +296,102 @@
         transform: rotate(360deg)
       }
     }
-
-    .lt {
-      font-size: 12px;
-      color: var(--gr500)
-    }
-
-    .es {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--gr400)
-    }
-
-    .es h3 {
-      font-size: 14px;
-      color: var(--gr600);
-      margin-bottom: 2px
-    }
-
-    .es p {
-      font-size: 11px
-    }
-
-    @media print {
-      .ctrl {
-        display: none !important
-      }
-
-      .rc {
-        padding: 0;
-        max-width: 100%
-      }
-
-      .sec,
-      .rh,
-      .kpi-big,
-      .kpi-sm {
-        box-shadow: none;
-        break-inside: avoid
-      }
-    }
-
-    @media(max-width:768px) {
-      .kpi-row {
-        grid-template-columns: 1fr
-      }
-
-      .kpi-sm-row {
-        grid-template-columns: repeat(2, 1fr)
-      }
-    }
-
-    @media(max-width:480px) {
-      .kpi-sm-row {
-        grid-template-columns: 1fr
-      }
-    }
   </style>
 </head>
 
 <body>
   <div class="ctrl" id="ctrlBar">
-    <div class="cg"><label>AC</label><select id="selAC" onchange="autoGen()">
-        <option value="">Cargando...</option>
+    <div style="font-weight:bold;color:#f59e0b;font-size:12px;margin-right:10px">v4.5.1</div>
+    <div style="display:flex;align-items:center;gap:10px"><label>AC</label><select id="selAC" onchange="autoGen()">
+        <option value="">Conectando...</option>
       </select></div>
-    <div class="sep"></div>
-    <div class="cg"><label>Semana</label><select id="selSem" onchange="autoGen()"></select></div>
-    <div class="mla" style="display:flex;gap:6px"><button class="btn bs" onclick="exportPDF()">PDF</button><button
-        class="btn bs" disabled>Mail</button></div>
+    <div style="display:flex;align-items:center;gap:10px"><label>Semana</label><select id="selSem"
+        onchange="autoGen()"></select></div>
+    <div class="mla"><button class="btn" onclick="exportPDF()">PDF</button></div>
   </div>
   <div class="lo" id="loader">
-    <div class="sp"></div><span class="lt" id="ltxt">Cargando...</span>
+    <div class="sp"></div><span id="ltxt">Iniciando...</span>
   </div>
   <div class="rc">
-    <div class="es" id="empty">
-      <h3>Cargando...</h3>
-      <p>Configurando reporte v4.4...</p>
+    <div id="empty" style="text-align:center;padding:60px 20px;color:var(--gr600)">
+      <h3 style="font-size:24px;margin-bottom:10px">Cargando reporte...</h3>
+      <p style="font-size:14px">Validando conexión con el backend híbrido</p>
     </div>
     <div id="rpt" style="display:none"></div>
   </div>
-  <script>
-    // GLOBAL ERROR CATCHER
-    window.onerror = function (message, source, lineno, colno, error) {
-      alert("GLOBAL ERROR DETECTED:\n" + message + "\nLine: " + lineno + "\nSource: " + source);
-      return false;
-    };
 
-    var CFG = null, DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'], VERSION = "4.4";
+  <script>
+    // NUCLEAR ERROR HANDLING
+    window.onerror = function (msg) { alert("ERROR CRITICO:\n" + msg); return false; };
+    console.log("REPORTE V4.5.1 INICIANDO");
+
+    var CFG = null, DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
 
     document.addEventListener('DOMContentLoaded', function () {
-      console.log('App Started v' + VERSION);
-      slo(true, 'Cargando configuración...');
-      fetch("/api/report?op=config")
-        .then(res => {
+      slo(true, 'Conectando con la API...');
+      // Cache buster for config fetch
+      fetch("/api/report?op=config&cb=" + Date.now())
+        .then(function (res) {
           if (!res.ok) throw new Error("HTTP " + res.status);
           return res.json();
         })
-        .then(data => onCfg(data))
-        .catch(e => {
-          console.error(e);
+        .then(function (data) { onCfg(data); })
+        .catch(function (e) {
           slo(false);
-          eid('empty').innerHTML = '<div class="err-box" style="background:#fee2e2;border:2px solid red;padding:20px"><b>Error Fatal de Carga:</b> ' + String(e.message || e) + '<br><br>Por favor, recarga con Ctrl+F5.</div>';
+          eid('empty').innerHTML = '<div class="err-box"><b>Error de Conexión:</b> ' + e.message + '<br><br>Fijate que <b>SHEETS_API_URL</b> esté bien configurada en Vercel.</div>';
         });
     });
 
-    function slo(on, txt) {
-      var l = eid('loader');
-      if (l) l.classList.toggle('on', !!on);
-      if (txt) eid('ltxt').textContent = txt;
-    }
-
     function eid(id) { return document.getElementById(id); }
+    function slo(on, txt) { var l = eid('loader'); if (l) l.classList.toggle('on', !!on); if (txt) eid('ltxt').textContent = txt; }
 
     function onCfg(data) {
-      console.log('onCfg data:', data);
+      console.log("Config recibida:", data);
       CFG = data || {};
       slo(false);
-      var errBox = eid('empty');
-      if (!errBox) return;
+      var box = eid('empty'); if (!box) return;
 
       if (CFG.error) {
-        errBox.innerHTML = '<div class="err-box"><b>Error del Servidor:</b> ' + String(CFG.error) + '</div>';
+        box.innerHTML = '<div class="err-box"><b>Error del Servidor:</b> ' + CFG.error + '</div>';
         return;
-      }
-
-      var errH = '';
-      if (CFG.errors && Array.isArray(CFG.errors)) {
-        errH = '<div class="err-box"><b>Errores detectados:</b>';
-        for (var i = 0; i < CFG.errors.length; i++) {
-          errH += '<br>- ' + CFG.errors[i];
-        }
-        errH += '</div>';
       }
 
       var sel = eid('selAC');
       if (sel) {
-        sel.innerHTML = '<option value="">-- Seleccionar AC --</option>';
-        if (CFG.acs && Array.isArray(CFG.acs)) {
-          for (var j = 0; j < CFG.acs.length; j++) {
-            var ac = CFG.acs[j];
-            var o = document.createElement('option');
-            o.value = ac;
-            o.textContent = ac;
-            sel.appendChild(o);
-          }
+        sel.innerHTML = '<option value="">-- ELIGE AC --</option>';
+        var acs = CFG.acs || [];
+        for (var i = 0; i < acs.length; i++) {
+          var o = document.createElement('option'); o.value = acs[i]; o.textContent = acs[i]; sel.appendChild(o);
         }
       }
-
       popSem();
-      errBox.innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Selecciona un AC y una semana (v' + VERSION + ')</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
+      box.innerHTML = '<div style="background:#fff7ed;padding:20px;border-radius:12px;border:1px solid #fed7aa;color:#9a3412"><b>LISTO (v4.5.1)</b><br>Elegí un AC y una semana para ver los datos.</div>';
     }
 
     function popSem() {
-      var sel = eid('selSem'); if (!sel) return;
-      sel.innerHTML = '';
-      if (!CFG || !CFG.semanas || !Array.isArray(CFG.semanas) || CFG.semanas.length === 0) {
-        sel.innerHTML = '<option>Sin semanas</option>';
-        return;
-      }
+      var sel = eid('selSem'); if (!sel) return; sel.innerHTML = '';
+      var sems = CFG.semanas || [];
+      if (sems.length === 0) { sel.innerHTML = '<option>Sin datos</option>'; return; }
 
       var byY = {};
-      for (var k = 0; k < CFG.semanas.length; k++) {
-        var s = CFG.semanas[k];
-        if (!s) continue;
-        var y = s.y || 'S/D';
-        if (!byY[y]) byY[y] = [];
-        byY[y].push(s);
+      for (var i = 0; i < sems.length; i++) {
+        var s = sems[i]; if (!s) continue;
+        var y = s.y || 'Extra';
+        if (!byY[y]) byY[y] = []; byY[y].push(s);
       }
 
       var ys = Object.keys(byY).sort(function (a, b) { return b - a });
       var now = Date.now(), best = '';
-
-      for (var m = 0; m < ys.length; m++) {
-        var year = ys[m];
-        var g = document.createElement('optgroup');
-        g.label = year;
-        var list = byY[year];
-        if (list && Array.isArray(list)) {
-          for (var n = 0; n < list.length; n++) {
-            var sem = list[n];
-            var o = document.createElement('option');
-            o.textContent = 'Sem ' + sem.n + ' (' + fD(sem.s) + ' - ' + fD(sem.e) + ')';
-            o.value = sem.n + '|' + sem.s + '|' + sem.e + '|' + year;
-            g.appendChild(o);
-            if (now >= sem.s && now <= sem.e + 86400000) best = o.value;
-          }
+      for (var j = 0; j < ys.length; j++) {
+        var g = document.createElement('optgroup'); g.label = ys[j];
+        var list = byY[ys[j]];
+        for (var k = 0; k < list.length; k++) {
+          var s2 = list[k];
+          var o = document.createElement('option');
+          o.textContent = 'Sem ' + s2.n + ' (' + fD(s2.s) + ' - ' + fD(s2.e) + ')';
+          o.value = s2.n + '|' + s2.s + '|' + s2.e + '|' + ys[j];
+          g.appendChild(o);
+          if (now >= s2.s && now <= (s2.e + 86400000)) best = o.value;
         }
         sel.appendChild(g);
       }
@@ -753,200 +401,84 @@
     function autoGen() {
       var ac = eid('selAC').value, sv = eid('selSem').value; if (!ac || !sv) return;
       var p = sv.split('|');
+      var rpt = eid('rpt'); rpt.innerHTML = '<div style="padding:100px;text-align:center;color:#6b7280">Calculando reporte híbrido...</div>';
+      rpt.style.display = 'block'; eid('empty').style.display = 'none';
 
-      var rptDiv = eid('rpt');
-      if (rptDiv) {
-        rptDiv.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gr500);font-size:12px">Generando reporte híbrido Metabase/Sheets...</div>';
-        rptDiv.style.display = 'block';
-      }
-      if (eid('empty')) eid('empty').style.display = 'none';
-
-      fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2])
-        .then(res => {
-          if (!res.ok) throw new Error("API Error " + res.status);
-          return res.json();
-        })
-        .then(r => {
+      fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2] + "&v=" + Date.now())
+        .then(function (res) { return res.json(); })
+        .then(function (r) {
           if (r.error) throw new Error(r.error);
-          renderCore(r, ac, +p[0], p[3], +p[1], +p[2]);
-          setTimeout(function () { renderCRM(r); }, 50);
-          setTimeout(function () { renderExtras(r); }, 100);
+          render(r, ac, p[0], p[3], p[1], p[2]);
         })
-        .catch(e => {
-          console.error(e);
-          if (rptDiv) rptDiv.innerHTML = '<div class="err-box"><b>Error de Reporte:</b> ' + String(e.message || e) + '</div>';
+        .catch(function (e) {
+          rpt.innerHTML = '<div class="err-box"><b>Error al Generar:</b> ' + e.message + '</div>';
         });
     }
 
-    function fD(d) {
-      if (typeof d === 'string' || typeof d === 'number') d = new Date(d);
-      if (!(d instanceof Date) || isNaN(d.getTime())) return "??/??/??";
+    function fD(v) {
+      var d = new Date(v); if (isNaN(d.getTime())) return "??/??";
       return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
     }
 
-    function NN(v) { return (typeof v === 'number') ? v.toLocaleString('es-AR') : '0'; }
-    function dc(v) { if (v > 0) return '<span class="chip cg2">+' + v + ' vs ant</span>'; if (v < 0) return '<span class="chip cr">' + v + ' vs ant</span>'; return '<span class="chip cbl">= vs ant</span>'; }
-    function dcC(v) { var st = 'style="font-size:10px;font-weight:700"'; if (v > 0) return '<span ' + st + '>+' + v + ' vs sem. ant</span>'; if (v < 0) return '<span ' + st + '>' + v + ' vs sem. ant</span>'; return '<span ' + st + '>0 vs sem. ant</span>'; }
+    function NN(v) { return (v || 0).toLocaleString('es-AR'); }
 
-    function renderCore(d, ac, sem, anio, sT, eT) {
-      var c = eid('rpt'); if (!c) return;
-      var tot = (d.trop || 0);
-      var bc = 'bb', bt = 'Semana BUENA'; if (tot < 3) { bc = 'bba'; bt = 'Semana BAJA'; } else if (tot < 8) { bc = 'br'; bt = 'Semana REGULAR'; }
-      var cabConc = (d.cabV || 0) + (d.cabC || 0);
-      var ccc = d.ccc || '0%';
-
+    function render(d, ac, sem, anio, sT, eT) {
       var h = '';
-      h += '<div class="rh"><div class="rht"><div><div class="rt"><span class="dot"></span>Reporte semanal &mdash; ' + ac + '</div>';
-      h += '<div class="rsub">Oferta, concreción y CRM consolidado (Vercel).</div>';
-      h += '<div class="rmeta"><span class="mt">SEMANA ' + sem + ' &middot; ' + anio + '</span><span class="mt">' + fD(sT) + ' al ' + fD(eT) + '</span></div>';
-      h += '</div><div class="badge ' + bc + '">' + bt + '</div></div></div>';
+      // Aquí va una versión ultralimpia del render 
+      h += '<div class="rh"><div class="rht"><div class="rt"><span class="dot"></span>' + ac + ' &mdash; Reporte</div>';
+      h += '<div class="rmeta"><span class="mt">Semana ' + sem + ' &middot; ' + anio + '</span><span class="mt">' + fD(+sT) + ' - ' + fD(+eT) + '</span></div></div></div>';
 
-      h += '<div class="kpi-row"><div class="kpi-big"><div class="kl">Cabezas Ofrecidas</div><div class="kv">' + NN(d.cab) + '</div>';
-      h += '<div class="kmeta">' + (d.trop || 0) + ' tropas &middot; ' + (d.socOf || 0) + ' sociedades &middot; ' + ccc + ' CCC</div>';
-      h += '<div class="kmeta">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>';
-      h += '<div class="kpi-big"><div class="kl">Cabezas Concretadas</div><div class="kv">' + NN(cabConc) + '</div>';
-      h += '<div class="ksplit">' + NN(d.cabV) + ' venta &middot; ' + NN(d.cabC) + ' compra</div>';
-      h += '<div class="kmeta">' + (d.trConc || 0) + ' tropas &middot; ' + (d.socOps || 0) + ' soc &middot; ' + dc(cabConc - (d.pConc || 0)) + '</div></div></div>';
-
-      h += '<div class="kpi-sm-row" id="sm-kpis">';
-      h += ksm('Soc. Gestionadas', '...', 'Cargando...');
-      h += ksm('Cargas', (d.carg || 0), (d.cargProp || 0) + ' propias<br>' + (d.cargAjen || 0) + ' ajenas');
-      h += ksm('SACs', '...', 'Cargando...');
-      h += ksm('Remates', '...', 'Cargando...');
-      h += ksm('Soc. Sin Gestion', '...', 'Cargando...');
+      h += '<div class="kpi-row">';
+      h += '<div class="kpi-big"><div style="font-size:10px;text-transform:uppercase;color:#9ca3af">Ofrecidas</div><div class="kv">' + NN(d.cab) + '</div><div style="font-size:11px;color:#6b7280">' + (d.trop || 0) + ' tropas &middot; ' + (d.ccc || '0%') + ' CCC</div><div style="font-size:11px;margin-top:5px">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>';
+      h += '<div class="kpi-big"><div style="font-size:10px;text-transform:uppercase;color:#9ca3af">Concretadas</div><div class="kv">' + NN((d.cabV || 0) + (d.cabC || 0)) + '</div><div style="font-size:11px;color:#6b7280">' + (d.trConc || 0) + ' ops &middot; ' + NN(d.cabV) + ' venta / ' + NN(d.cabC) + ' compra</div><div style="font-size:11px;margin-top:5px">' + dc(((d.cabV || 0) + (d.cabC || 0)) - (d.pConc || 0)) + '</div></div>';
       h += '</div>';
 
-      h += '<div class="sec"><div class="sh"><span class="st">Actividades Diarias</span><span class="stag">Por día</span></div>';
-      h += '<div class="chart-legend"><div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>Tropas</div><div class="leg-item" id="sa-leg" style="display:none"><div class="leg-dot" style="background:#2563eb"></div>SACs</div></div>';
-      h += '<div class="chart-box"><canvas id="chartD"></canvas></div></div>';
-
-      h += '<div class="sec"><div class="sh"><span class="st">Top 5 Negocios</span><span class="stag">Operaciones</span><span class="sd">Por cantidad (Q)</span></div><div class="tw">' + tblOps(d.top5) + '</div></div>';
-      h += '<div id="crm-section"><div class="sec" style="text-align:center;padding:40px;color:var(--gr400)">Cargando sección CRM...</div></div>';
-      h += '<div id="extras-section"></div>';
-
-      c.innerHTML = h;
-      window.CORE_DATA = d;
-      drawChart(d.dT || [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]);
-    }
-
-    function renderCRM(d) {
-      var kpiBox = eid('sm-kpis');
-      if (kpiBox && kpiBox.children && kpiBox.children.length >= 5) {
-        kpiBox.children[0].innerHTML = '<div class="kl">Soc. Gestionadas</div><div class="kv">' + (d.tSG || 0) + '</div><div class="kmeta">' + (d.com || 0) + ' comentarios<br>' + (d.age || 0) + ' agendas<br>' + (d.nuevas || 0) + ' nuevas</div>';
-        kpiBox.children[4].innerHTML = '<div class="kl">Soc. Sin Gestion</div><div class="kv">' + (d.socSinGestNum || 0) + '</div><div class="kmeta">Pendientes de contacto</div>';
-      }
-
-      var h = '';
-      h += '<div class="sec"><div class="sh" style="margin-bottom:20px"><span class="st">Sociedades Gestionadas - CRM</span></div>';
-      h += '<div class="crm-layout">';
-      h += '<div class="crm-boxes">';
-      h += '<div class="crm-box"><div class="b-title">SOC. CARGADAS</div><div class="b-val">' + NN(d.nuevas || 0) + '<span class="b-vs">' + dcC((d.nuevas || 0) - (d.pNuevas || 0)) + '</span></div></div>';
-      h += '<div class="crm-box"><div class="b-title">SOC. GESTIONADAS</div><div class="b-val">' + NN(d.tSG || 0) + '<span class="b-vs">' + dcC((d.tSG || 0) - (d.pTSG || 0)) + '</span></div></div>';
-      h += '<div class="crm-box"><div class="b-title">SOC. SIN GESTIÓN</div><div class="b-val">' + NN(d.socSinGestNum || 0) + '<span class="b-vs">' + dcC(0) + '</span></div></div><div style="font-size:10px;color:var(--gr500);margin-top:-8px">Sociedades en Estado "NUEVO"</div>';
+      h += '<div class="kpi-sm-row">';
+      h += ksm('Soc. Gest', d.tSG || 0, (d.com || 0) + ' com / ' + (d.age || 0) + ' age');
+      h += ksm('Cargas', d.carg || 0, (d.cargProp || 0) + ' prop / ' + (d.cargAjen || 0) + ' ajen');
+      h += ksm('SACs', (d.sacs || []).length, 'Pedidos credito');
+      h += ksm('Remates', d.rem || 0, 'Participaciones');
+      h += ksm('Nuevas', d.nuevas || 0, 'Leads cargados');
       h += '</div>';
 
-      h += '<div class="crm-tables">';
-      h += '<div><div style="font-size:12px;color:var(--gr800);margin-bottom:8px">Top 5 Sociedades sin gestión</div>';
-      h += '<div class="tw"><table><thead><tr><th>Kt</th><th>Kv</th><th>Usuario - Sociedad</th><th>Fecha Asig.</th><th>Fuente</th><th>Ult. Gestión</th><th>Ult Act.</th><th>Sin gestión</th></tr></thead><tbody>';
-      if (d.ssgTop5 && Array.isArray(d.ssgTop5) && d.ssgTop5.length) {
-        for (var i = 0; i < d.ssgTop5.length; i++) {
-          var s = d.ssgTop5[i];
-          var kt = s.kt ? '<span class="kt-tag">' + s.kt + '</span>' : '';
-          var kv = s.kv ? '<span class="kt-tag" style="background:#a58c67">' + s.kv + '</span>' : '';
-          var sg = s.sg ? '<span style="color:#991b1b;font-weight:600">' + s.sg + '</span>' : '';
-          var ua = s.ua ? '<span style="color:#c2410c">' + s.ua + '</span>' : '';
-          var ug = s.ug || '-';
-          h += '<tr><td>' + kt + '</td><td>' + kv + '</td><td class="tdb">' + s.soc + '</td><td>' + s.fa + '</td><td>' + s.fu + '</td><td style="font-size:10px">' + ug + '</td><td style="font-size:10px">' + ua + '</td><td style="font-size:10px">' + sg + '</td></tr>';
-        }
-      } else { h += '<tr><td colspan="8" class="empty-t">Sin datos</td></tr>'; }
+      // Gráfico Simplificado (Placeholder si falla Canvas)
+      h += '<div class="sec"><div class="st">Actividad Diaria</div><div class="chart-box"><canvas id="chartD"></canvas></div></div>';
+
+      // Tabla Negocios
+      h += '<div class="sec"><div class="st">Top 5 Operaciones</div><div class="tw"><table><thead><tr><th>ID</th><th>Soc. Vendedora</th><th>Fecha</th><th>Q</th><th>Cat</th></tr></thead><tbody>';
+      var tops = d.top5 || [];
+      for (var i = 0; i < tops.length; i++) {
+        var r = tops[i].d;
+        h += '<tr><td>' + r[0] + '</td><td>' + r[2] + '</td><td>' + r[6] + '</td><td style="font-weight:bold">' + NN(r[7]) + '</td><td>' + r[10] + '</td></tr>';
+      }
+      if (tops.length === 0) h += '<tr><td colspan="5" style="text-align:center;padding:10px">Sin operaciones</td></tr>';
       h += '</tbody></table></div></div>';
-      h += '<div class="crm-tables-hz-line"></div>';
-      h += '<div><div style="font-size:12px;color:var(--gr800);margin-bottom:8px">Actividad Semanal</div>';
-      h += '<div class="tw"><table><thead><tr><th>Kt</th><th>Kv</th><th>Usuario - Sociedad</th><th>Fecha Asig.</th><th>Fuente</th><th>Ult. Gestión</th><th>Ult Act.</th></tr></thead><tbody>';
-      if (d.actSemanal && Array.isArray(d.actSemanal) && d.actSemanal.length) {
-        for (var j = 0; j < d.actSemanal.length; j++) {
-          var s2 = d.actSemanal[j];
-          var kt2 = s2.kt ? '<span class="kt-tag">' + s2.kt + '</span>' : '';
-          var kv2 = s2.kv ? '<span class="kt-tag" style="background:#a58c67">' + s2.kv + '</span>' : '';
-          var ua2 = s2.ua ? '<span style="color:#c2410c">' + s2.ua + '</span>' : '';
-          var ug2 = s2.ug || '-';
-          h += '<tr><td>' + kt2 + '</td><td>' + kv2 + '</td><td class="tdb">' + s2.soc + '</td><td>' + s2.fa + '</td><td>' + s2.fu + '</td><td style="font-size:10px">' + ug2 + '</td><td style="font-size:10px">' + ua2 + '</td></tr>';
-        }
-      } else { h += '<tr><td colspan="7" class="empty-t">Sin actividad esta semana</td></tr>'; }
-      h += '</tbody></table></div></div>';
-      h += '</div></div></div>';
 
-      eid('crm-section').innerHTML = h;
+      eid('rpt').innerHTML = h;
+      draw(d.dT || [0, 0, 0, 0, 0, 0, 0]);
     }
 
-    function renderExtras(d) {
-      var kpiBox = eid('sm-kpis');
-      if (kpiBox && kpiBox.children && kpiBox.children.length >= 4) {
-        kpiBox.children[2].innerHTML = '<div class="kl">SACs</div><div class="kv">' + (d.sacs ? d.sacs.length : 0) + '</div><div class="kmeta">' + dc((d.sacs ? d.sacs.length : 0) - (d.pSac || 0)) + '</div>';
-        kpiBox.children[3].innerHTML = '<div class="kl">Remates</div><div class="kv">' + (d.rem || 0) + '</div><div class="kmeta">' + dc((d.rem || 0) - (d.pRem || 0)) + '</div>';
+    function ksm(l, v, m) { return '<div class="kpi-sm"><div style="font-size:8px;font-weight:700;color:#9ca3af;text-transform:uppercase">' + l + '</div><div class="kv">' + v + '</div><div style="font-size:9px;color:#6b7280">' + m + '</div></div>'; }
+    function dc(v) { if (v > 0) return '<span style="color:#059669;font-weight:700">▲ ' + v + '</span>'; if (v < 0) return '<span style="color:#dc2626;font-weight:700">▼ ' + Math.abs(v) + '</span>'; return '='; }
+
+    function draw(tr) {
+      var cv = eid('chartD'); if (!cv) return; var ctx = cv.getContext('2d');
+      var W = cv.parentElement.offsetWidth, H = cv.parentElement.offsetHeight; cv.width = W; cv.height = H;
+      var mx = 1; for (var i = 0; i < 7; i++) if (tr[i] > mx) mx = tr[i]; mx *= 1.2;
+      var bw = (W - 40) / 7;
+      ctx.fillStyle = '#10b981';
+      for (var i = 0; i < 7; i++) {
+        var bh = (tr[i] / mx) * (H - 20);
+        ctx.fillRect(20 + i * bw + bw * 0.2, H - bh, bw * 0.6, bh);
+        ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif'; ctx.fillText(DIAS[i], 20 + i * bw + bw * 0.2, H - 2);
+        ctx.fillStyle = '#10b981';
       }
-
-      var h = '';
-      if (d.sacs && Array.isArray(d.sacs) && d.sacs.length) {
-        h += '<div class="sec"><div class="sh"><span class="st">SACs Solicitados</span><span class="stag">Crédito</span></div>';
-        h += '<div class="tw"><table><thead><tr><th>Sociedad</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>';
-        for (var i = 0; i < d.sacs.length; i++) {
-          var s = d.sacs[i];
-          h += '<tr><td class="tdb">' + s.s + '</td><td>' + fD(s.f) + '</td><td>' + s.e + '</td></tr>';
-        }
-        h += '</tbody></table></div></div>';
-      }
-      var eSec = eid('extras-section');
-      if (eSec) eSec.innerHTML = h;
-      var saLeg = eid('sa-leg');
-      if (saLeg) saLeg.style.display = 'flex';
-
-      if (window.CORE_DATA && d.sacs && Array.isArray(d.sacs)) {
-        var saData = [0, 0, 0, 0, 0, 0, 0];
-        for (var j = 0; j < d.sacs.length; j++) {
-          var f = new Date(d.sacs[j].f);
-          var idx = f.getDay() === 0 ? 6 : f.getDay() - 1;
-          saData[idx]++;
-        }
-        drawChart(window.CORE_DATA.dT, saData);
-      }
-    }
-
-    function ksm(l, v, m) { return '<div class="kpi-sm"><div class="kl">' + l + '</div><div class="kv">' + v + '</div><div class="kmeta">' + m + '</div></div>'; }
-
-    function tblOps(ops) {
-      if (!ops || !Array.isArray(ops) || ops.length === 0) return '<div class="empty-t">Sin operaciones</div>';
-      var h = '<table><thead><tr><th>ID</th><th>UN</th><th>Soc. Vendedora</th><th>Fecha</th><th>Q</th><th>Cat</th><th>Soc. Compradora</th></tr></thead><tbody>';
-      for (var i = 0; i < ops.length; i++) {
-        var o = ops[i];
-        if (!o || !o.d) continue;
-        var r = o.d;
-        h += '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td class="tdb">' + r[2] + '</td><td>' + r[6] + '</td><td style="font-weight:700">' + NN(r[7]) + '</td><td>' + r[10] + '</td><td class="tdb">' + r[4] + '</td></tr>';
-      }
-      return h + '</tbody></table>';
-    }
-
-    function drawChart(tr, sa) {
-      try {
-        var cv = eid('chartD'); if (!cv) return; var ctx = cv.getContext('2d');
-        var W = cv.parentElement.offsetWidth, H = cv.parentElement.offsetHeight; cv.width = W * 2; cv.height = H * 2; cv.style.width = W + 'px'; cv.style.height = H + 'px'; ctx.scale(2, 2);
-        var merged = (tr || []).concat(sa || []);
-        var mx = 1;
-        for (var i = 0; i < merged.length; i++) if (merged[i] > mx) mx = merged[i];
-        mx = Math.ceil(mx * 1.2) || 1;
-        var p = { t: 10, r: 20, b: 28, l: 30 }, cW = W - p.l - p.r, cH = H - p.t - p.b, bW = cW / 7, bw = bW * .28;
-        ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = .5;
-        for (var i = 0; i <= 4; i++) { var y = p.t + cH - (cH / 4) * i; ctx.beginPath(); ctx.moveTo(p.l, y); ctx.lineTo(W - p.r, y); ctx.stroke(); ctx.fillStyle = '#9ca3af'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right'; ctx.fillText(Math.round(mx / 4 * i), p.l - 5, y + 3); }
-        for (var i = 0; i < 7; i++) { var cx = p.l + bW * i + bW / 2; var h1 = ((tr && tr[i] ? tr[i] : 0) / mx) * cH; ctx.fillStyle = '#10b981'; ctx.fillRect(cx - bw - 1, p.t + cH - h1, bw, h1); var h2 = ((sa && sa[i] ? sa[i] : 0) / mx) * cH; ctx.fillStyle = '#2563eb'; ctx.fillRect(cx + 1, p.t + cH - h2, bw, h2); ctx.fillStyle = '#6b7280'; ctx.font = '9px DM Sans'; ctx.textAlign = 'center'; ctx.fillText(DIAS[i], cx, H - p.b + 14); }
-      } catch (e) { console.error("Chart error:", e); }
     }
 
     function exportPDF() {
-      var rpt = eid('rpt'); if (!rpt || !rpt.innerHTML) return;
-      var ac = eid('selAC').value || 'Reporte', p = eid('selSem').value.split('|');
-      eid('ctrlBar').style.display = 'none';
-      if (typeof html2pdf === 'undefined') { alert("Error: Librería PDF no cargada."); eid('ctrlBar').style.display = ''; return; }
-      html2pdf().set({ margin: [5, 5, 5, 5], filename: 'Reporte_' + ac.replace(/\s+/g, '_') + '_S' + p[0] + '.pdf', image: { type: 'jpeg', quality: .95 }, html2canvas: { scale: 1.5, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['avoid-all'] } }).from(rpt).save().then(function () { eid('ctrlBar').style.display = ''; });
+      var el = eid('rpt'); if (!el || !el.innerHTML) return;
+      var opt = { margin: 5, filename: 'Reporte.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+      html2pdf().from(el).set(opt).save();
     }
   </script>
 </body>
