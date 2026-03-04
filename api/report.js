@@ -1,5 +1,5 @@
 /**
- * Vercel Serverless API - Reporte Semanal 5.3 (Key Fixer)
+ * Vercel Serverless API - Reporte Semanal 5.6 (Idiot-Proof Version)
  */
 const { google } = require('googleapis');
 
@@ -8,21 +8,15 @@ module.exports = async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     if (req.method === "OPTIONS") return res.status(200).end();
 
-    const { op } = req.query;
-
-    const dns = {
-        G_EMAIL: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        G_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
-        S_ID: !!(process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID)
-    };
+    const { op, ac, startTs, endTs } = req.query;
 
     try {
         if (op === "config") {
             const api = getSheetsApi();
             const sId = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID;
 
-            if (!api) throw new Error("Error crítico: La clave privada (GOOGLE_PRIVATE_KEY) no pudo ser decodificada. Revisá que esté completa en Vercel.");
-            if (!sId) throw new Error("Falta la variable GOOGLE_SHEET_ID.");
+            if (!api) throw new Error("No se pudo conectar con Google. Revisá tus variables de entorno.");
+            if (!sId) throw new Error("Falta la variable GOOGLE_SHEET_ID en Vercel.");
 
             const response = await api.spreadsheets.values.get({
                 spreadsheetId: sId,
@@ -46,55 +40,52 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ acs: Array.from(acSet).sort(), semanas });
         }
 
-        return res.status(400).json({ error: "Especifique op=config para empezar", debug: dns });
+        // Lógica de Reporte simplificada para test
+        return res.status(400).json({ error: "Especifique op=config" });
 
     } catch (e) {
-        const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
         return res.status(500).json({
-            error: "Error en Servidor: " + e.message,
-            email_debug: email ? (email.slice(0, 4) + "..." + email.slice(-10)) : "Vacío",
-            ayuda: "Verificá que el email coincida con el client_email de tu JSON de Google."
+            error: "Error: " + e.message,
+            tip: "Asegúrate de que la Service Account tenga permiso de Lector en el Google Sheet."
         });
     }
 };
 
 function getSheetsApi() {
-    let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    let key = process.env.GOOGLE_PRIVATE_KEY;
+    let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
+    let key = process.env.GOOGLE_PRIVATE_KEY || "";
+
+    // DETECTOR INTELIGENTE: Si pegó el JSON entero en el email
+    if (email.trim().startsWith('{')) {
+        try {
+            const parsed = JSON.parse(email);
+            if (parsed.client_email) email = parsed.client_email;
+            if (parsed.private_key) key = parsed.private_key;
+        } catch (e) {
+            // Si no es JSON válido, probamos con Regex para extraer el email
+            const emailMatch = email.match(/"client_email":\s*"([^"]+)"/);
+            if (emailMatch) email = emailMatch[1];
+            const keyMatch = email.match(/"private_key":\s*"([^"]+)"/);
+            if (keyMatch) key = keyMatch[1];
+        }
+    }
+
     if (!email || !key) return null;
 
     try {
-        // LIMPIEZA DE EMAIL
-        email = email.trim();
-        if (email.startsWith('"') && email.endsWith('"')) email = email.slice(1, -1);
-        if (email.startsWith("'") && email.endsWith("'")) email = email.slice(1, -1);
+        email = email.trim().replace(/^"|"$/g, '');
+        key = key.trim().replace(/^"|"$/g, '').replace(/\\n/g, '\n');
 
-        // SUPER LIMPIADOR DE CLAVE RSA/PKCS8
-        key = key.trim();
-
-        // Quitar comillas si el usuario copió el valor del JSON con comillas
-        if (key.startsWith('"') && key.endsWith('"')) key = key.slice(1, -1);
-        if (key.startsWith("'") && key.endsWith("'")) key = key.slice(1, -1);
-
-        // Corregir escapes de saltos de línea (el error técnico venía de aquí)
-        // Reemplazamos tanto la cadena literal "\n" como los escapados "\\"
-        key = key.replace(/\\n/g, '\n');
-
-        // Asegurar encabezados correctos si faltan
         if (!key.includes("---")) {
             key = "-----BEGIN PRIVATE KEY-----\n" + key + "\n-----END PRIVATE KEY-----";
         }
 
         const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: email,
-                private_key: key
-            },
+            credentials: { client_email: email, private_key: key },
             scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
         });
         return google.sheets({ version: 'v4', auth });
     } catch (e) {
-        console.error("Auth init failed:", e.message);
         return null;
     }
 }
