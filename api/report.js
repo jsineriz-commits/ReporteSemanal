@@ -57,11 +57,16 @@ module.exports = async function handler(req, res) {
 };
 
 function getSheetsApi() {
-    const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     let key = process.env.GOOGLE_PRIVATE_KEY;
     if (!email || !key) return null;
 
     try {
+        // LIMPIEZA DE EMAIL
+        email = email.trim();
+        if (email.startsWith('"') && email.endsWith('"')) email = email.slice(1, -1);
+        if (email.startsWith("'") && email.endsWith("'")) email = email.slice(1, -1);
+
         // SUPER LIMPIADOR DE CLAVE RSA/PKCS8
         key = key.trim();
 
