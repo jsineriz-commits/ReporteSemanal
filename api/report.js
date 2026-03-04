@@ -1,20 +1,6 @@
 /**
- * Vercel Serverless API - Reporte Semanal 12.0 (Google Sheets Only)
- * ================================================================
- * CORRECCIÓN FUNDAMENTAL: El sistema original (Codigo.js) lee de pestañas
- * de Google Sheets (BASE, OPS, etc.) que ya tienen los datos de Metabase
- * pre-cargados. NO necesitamos consultar Metabase directamente.
- *
- * Pestañas usadas:
- *   - BASE              (16 cols A-P): Ofrecidas
- *   - OPS               (23 cols A-W): Concretadas + Cargas
- *   - Comentarios_CRM    (8 cols A-H): Comentarios
- *   - Agenda_CRM         (5 cols A-E): Agendas
- *   - Leads_CRM         (12 cols A-L): Leads Nuevas
- *   - aux leads         (45 cols A-AS): Soc. Sin Gestión + Actividad
- *   - SAC               (20 cols A-T): SACs
- *   - REMATES            (4 cols A-D): Remates
- *   - Config 2.0        (1 col  A):   Lista de ACs
+ * Vercel Serverless API - Reporte Semanal 12.1 (Diagnostic)
+ * Agrega un endpoint de diagnóstico para ver qué hay realmente en las hojas.
  */
 const { google } = require('googleapis');
 
@@ -29,17 +15,55 @@ module.exports = async function handler(req, res) {
 
     try {
         const api = getSheetsApi();
-        if (!api) return res.status(500).json({ error: "Google Auth falló. Revisar Service Account." });
+        if (!api) return res.status(500).json({ error: "Google Auth falló." });
+
+        // ==============================================
+        // DIAGNÓSTICO: Ver qué hojas existen y qué datos tienen
+        // ==============================================
+        if (op === "diag") {
+            // Primero: obtener la lista de hojas
+            const meta = await api.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+            const sheetNames = meta.data.sheets.map(s => s.properties.title);
+
+            // Intentar leer muestras de cada pestaña clave
+            const samples = {};
+            for (const name of ['BASE', 'OPS', 'Comentarios_CRM', 'Config 2.0']) {
+                if (sheetNames.includes(name)) {
+                    try {
+                        const d = await api.spreadsheets.values.get({
+                            spreadsheetId: SPREADSHEET_ID,
+                            range: `'${name}'!A1:W3` // Headers + 2 filas de ejemplo
+                        });
+                        samples[name] = d.data.values || [];
+                    } catch (e) { samples[name] = "Error: " + e.message; }
+                } else {
+                    samples[name] = "⛔ NO EXISTE ESTA PESTAÑA";
+                }
+            }
+
+            return res.status(200).json({
+                spreadsheetId: SPREADSHEET_ID,
+                allSheets: sheetNames,
+                samples
+            });
+        }
 
         if (op === "config") {
-            // Traer ACs y semanas
-            const response = await api.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'Comentarios_CRM!F2:F'
-            });
-            const rows = response.data.values || [];
-            const acSet = new Set();
-            for (const row of rows) if (row[0]) acSet.add(row[0].trim());
+            // Intentar leer de Config 2.0 primero (como el original), fallback a Comentarios_CRM
+            let acList = [];
+            const meta = await api.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+            const sheetNames = meta.data.sheets.map(s => s.properties.title);
+
+            if (sheetNames.includes('Config 2.0')) {
+                const d = await api.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: "'Config 2.0'!A2:A" });
+                acList = (d.data.values || []).map(r => r[0]).filter(Boolean);
+            }
+            if (acList.length === 0 && sheetNames.includes('Comentarios_CRM')) {
+                const d = await api.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Comentarios_CRM!F2:F' });
+                const set = new Set();
+                (d.data.values || []).forEach(r => { if (r[0]) set.add(r[0].trim()); });
+                acList = Array.from(set);
+            }
 
             const semanas = [];
             const s2026 = new Date("2026-01-01T00:00:00Z").getTime();
@@ -47,56 +71,80 @@ module.exports = async function handler(req, res) {
                 const s = s2026 + (i - 1) * 604800000;
                 semanas.push({ n: i, s, e: s + 518400000, y: 2026 });
             }
-            return res.status(200).json({ acs: Array.from(acSet).sort(), semanas });
+            return res.status(200).json({ acs: acList.sort(), semanas, _source: sheetNames.includes('Config 2.0') ? 'Config 2.0' : 'Comentarios_CRM' });
         }
 
         if (op === "report") {
             if (!ac || !startTs || !endTs) return res.status(400).json({ error: "Faltan parámetros" });
 
-            // TRAER TODO DE GOOGLE SHEETS EN UNA SOLA LLAMADA
-            const batchRes = await api.spreadsheets.values.batchGet({
-                spreadsheetId: SPREADSHEET_ID,
-                ranges: [
-                    'BASE!A2:P',           // 0 - Ofrecidas  (16 cols)
-                    'OPS!A2:W',            // 1 - Concretadas (23 cols)
-                    'Comentarios_CRM!A2:H', // 2 - Comentarios (8 cols)
-                    'Agenda_CRM!A2:E',      // 3 - Agendas    (5 cols)
-                    'Leads_CRM!A2:L',       // 4 - Leads      (12 cols)
-                    'aux leads!A2:AS',      // 5 - Aux Leads  (45 cols)
-                    'SAC!A2:T',             // 6 - SACs       (20 cols)
-                    'REMATES!A2:D'          // 7 - Remates    (4 cols)
-                ]
-            });
+            // Verificar qué pestañas existen
+            const meta = await api.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+            const sheetNames = meta.data.sheets.map(s => s.properties.title);
 
-            const vR = batchRes.data.valueRanges;
-            const dBase = vR[0].values || [];
-            const dOps = vR[1].values || [];
-            const dCom = vR[2].values || [];
-            const dAge = vR[3].values || [];
-            const dLeads = vR[4].values || [];
-            const dAux = vR[5].values || [];
-            const dSac = vR[6].values || [];
-            const dRem = vR[7].values || [];
+            // Construir rangos dinámicamente según las pestañas que existan
+            const ranges = [];
+            const rangeMap = {};
+            const addRange = (name, range, key) => {
+                if (sheetNames.includes(name)) {
+                    rangeMap[key] = ranges.length;
+                    ranges.push(`'${name}'!${range}`);
+                }
+            };
+
+            addRange('BASE', 'A2:P', 'base');
+            addRange('OPS', 'A2:W', 'ops');
+            addRange('Comentarios_CRM', 'A2:H', 'com');
+            addRange('Agenda_CRM', 'A2:E', 'age');
+            addRange('Leads_CRM', 'A2:L', 'leads');
+            addRange('aux leads', 'A2:AS', 'aux');
+            addRange('SAC', 'A2:T', 'sac');
+            addRange('REMATES', 'A2:D', 'rem');
+
+            if (ranges.length === 0) {
+                return res.status(200).json({ error: "No se encontró ninguna pestaña válida", sheets: sheetNames });
+            }
+
+            const batchRes = await api.spreadsheets.values.batchGet({ spreadsheetId: SPREADSHEET_ID, ranges });
+
+            const getVals = (key) => {
+                if (rangeMap[key] === undefined) return [];
+                return batchRes.data.valueRanges[rangeMap[key]].values || [];
+            };
+
+            const dBase = getVals('base');
+            const dOps = getVals('ops');
+            const dCom = getVals('com');
+            const dAge = getVals('age');
+            const dLeads = getVals('leads');
+            const dAux = getVals('aux');
+            const dSac = getVals('sac');
+            const dRem = getVals('rem');
 
             const r = processReport(ac, Number(startTs), Number(endTs), dBase, dOps, dCom, dAge, dLeads, dAux, dSac, dRem);
-            r._rows = { base: dBase.length, ops: dOps.length, com: dCom.length };
+
+            // Debug info
+            r._debug = {
+                sheetsFound: sheetNames,
+                rangesUsed: ranges,
+                rowCounts: { base: dBase.length, ops: dOps.length, com: dCom.length, age: dAge.length, sac: dSac.length, rem: dRem.length },
+                acSearched: ac,
+                // Muestra de valores AC encontrados en BASE col F (idx 5)
+                sampleACsInBase: [...new Set(dBase.slice(0, 50).map(r => r[5]).filter(Boolean))].slice(0, 10),
+                // Muestra de valores AC encontrados en OPS col G (idx 6)
+                sampleACsInOps: [...new Set(dOps.slice(0, 50).map(r => r[6]).filter(Boolean))].slice(0, 10),
+                // Muestra de valores AC en Comentarios_CRM col F (idx 5)
+                sampleACsInCom: [...new Set(dCom.slice(0, 50).map(r => r[5]).filter(Boolean))].slice(0, 10),
+            };
+
             return res.status(200).json(r);
         }
 
-        return res.status(400).json({ error: "Especifique op=config o op=report" });
+        return res.status(400).json({ error: "Especifique op=config, op=report, o op=diag" });
     } catch (e) {
-        return res.status(500).json({ error: e.message, stack: e.stack ? e.stack.substring(0, 300) : "" });
+        return res.status(500).json({ error: e.message, stack: e.stack ? e.stack.substring(0, 500) : "" });
     }
 };
 
-/**
- * Procesamiento idéntico al Codigo.js original (Apps Script).
- * Mapeo de columnas por ÍNDICE (igual que getSheetData):
- *
- * BASE: [0]=?, [1]=fecha, [2]=sociedad, [3]=estado, [4]=cabezas, [5]=AC, [6]=gF, [15]=motivo
- * OPS:  [0]=ID, [1]=UN, [2]=fecha, [5]=RS_Vend, [6]=AC_Vend, [7]=RS_Comp, [8]=AC_Comp,
- *       [9]=Q, [10]=Cat, [18]=fecha_carga, [20]=?, [22]=AC_carga
- */
 function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux, dSac, dRem) {
     const dIn = new Date(startTs); dIn.setUTCHours(0, 0, 0, 0);
     const dFi = new Date(endTs); dFi.setUTCHours(23, 59, 59, 999);
@@ -122,26 +170,21 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
         carg: 0, cargProp: 0, cargAjen: 0
     };
 
-    // =========================================
-    // 1. BASE (Ofrecidas) — Columnas por índice
-    // =========================================
+    // 1. BASE
     const socS = {};
     for (const row of dBase) {
         if (String(row[5] || "").trim() !== ac) continue;
         const fStr = toYMD(row[1]);
         if (!fStr) continue;
-
         const est = String(row[3] || "").trim().toUpperCase();
         const gF = Number(row[6]) || 0;
         const mot = String(row[15] || "").trim();
         const cab = Number(row[4]) || 0;
-
         let ok = false, esCCC = false;
         if (est === "CONCRETADA") { ok = true; esCCC = true; }
         else if (est === "PUBLICADO") { ok = true; esCCC = true; }
         else if (est === "NO CONCRETADAS" && mot !== "No la comercializo" && gF === 1) { ok = true; }
         if (!ok) continue;
-
         if (fStr >= dInicio && fStr <= dFin) {
             r.cab += cab; r.trop++;
             if (esCCC) r.cccNum++;
@@ -155,19 +198,14 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
     r.socOf = Object.keys(socS).length;
     r.ccc = r.trop > 0 ? Math.round((r.cccNum / r.trop) * 100) + "%" : "0%";
 
-    // =============================================
-    // 2. OPS (Concretadas + Cargas) — Por índice
-    // =============================================
-    const socOps = {};
-    const allOps = [];
+    // 2. OPS
+    const socOps = {}, allOps = [];
     for (const row of dOps) {
         const fStr = toYMD(row[2]);
         if (!fStr) continue;
-
         const aV = String(row[6] || "").trim();
         const aC = String(row[8] || "").trim();
         const q = Number(row[9]) || 0;
-
         if (aV === ac || aC === ac) {
             if (fStr >= dInicio && fStr <= dFin) {
                 if (aV === ac) { r.cabV += q; if (row[5]) socOps[row[5]] = 1; }
@@ -175,15 +213,10 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
                 r.trConc++;
                 const fD = new Date(row[2]);
                 const fmtD = fD.getUTCDate().toString().padStart(2, '0') + '/' + (fD.getUTCMonth() + 1).toString().padStart(2, '0');
-                allOps.push({
-                    q,
-                    d: [row[0] || "", row[1] || "", row[5] || "", aV, row[7] || "", aC, fmtD, q, row[22] || "", row[20] || "", row[10] || ""]
-                });
+                allOps.push({ q, d: [row[0] || "", row[1] || "", row[5] || "", aV, row[7] || "", aC, fmtD, q, row[22] || "", row[20] || "", row[10] || ""] });
             }
             if (fStr >= dInicioAnt && fStr <= dFinAnt) r.pConc += q;
         }
-
-        // Cargas
         const fCarStr = toYMD(row[18]);
         if (fCarStr && String(row[22] || "").trim() === ac) {
             if (fCarStr >= dInicio && fCarStr <= dFin) {
@@ -196,9 +229,7 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
     r.top5 = allOps.slice(0, 5);
     r.socOps = Object.keys(socOps).length;
 
-    // =========================================
-    // 3. CRM (Comentarios + Agendas)
-    // =========================================
+    // 3. CRM
     const socGest = {}, pSocGest = {};
     for (const row of dCom) {
         if (String(row[5] || "").trim() !== ac) continue;
@@ -208,9 +239,7 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
             if (String(row[7] || "").trim() === "") r.com++;
             if (row[0]) socGest[row[0]] = 1;
         }
-        if (fStr >= dInicioAnt && fStr <= dFinAnt) {
-            if (row[0]) pSocGest[row[0]] = 1;
-        }
+        if (fStr >= dInicioAnt && fStr <= dFinAnt) { if (row[0]) pSocGest[row[0]] = 1; }
     }
     for (const row of dAge) {
         if (String(row[3] || "").trim() !== ac) continue;
@@ -222,9 +251,7 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
     r.tSG = Object.keys(socGest).length;
     r.pTSG = Object.keys(pSocGest).length;
 
-    // =========================================
-    // 4. Leads (Nuevas)
-    // =========================================
+    // 4. Leads
     for (const row of dLeads) {
         if (String(row[2] || "").trim() !== ac) continue;
         if (String(row[3] || "").trim() !== "UA" || String(row[11] || "").trim() === "NO HABILITADO") continue;
@@ -234,24 +261,14 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
         if (fStr >= dInicioAnt && fStr <= dFinAnt) r.pNuevas++;
     }
 
-    // =========================================
-    // 5. Aux Leads (Soc Sin Gestión + Actividad)
-    // =========================================
+    // 5. Aux
     const ssgAll = [];
     for (const row of dAux) {
         if (String(row[1] || "").trim() !== ac) continue;
         const isNuevo = String(row[4] || "").trim().toUpperCase() === "NUEVO";
         if (isNuevo) r.socSinGestNum++;
-
         const cDateStr = toYMD(row[2]);
-        const obj = {
-            kt: row[31] || "", kv: row[36] || "", soc: row[29] || "",
-            fa: cDateStr ? new Date(row[2]).getUTCDate().toString().padStart(2, '0') + '/' + (new Date(row[2]).getUTCMonth() + 1).toString().padStart(2, '0') : "",
-            fu: row[37] || "", ug: row[40] || "", ua: row[39] || "", sg: row[38] || "",
-            w: Number(row[22]) || 0,
-            cDateStr
-        };
-
+        const obj = { soc: row[29] || "", w: Number(row[22]) || 0, cDateStr };
         if (isNuevo) ssgAll.push(obj);
         if (cDateStr >= dInicio && cDateStr <= dFin) {
             const ag = Number(row[32]) || 0;
@@ -262,22 +279,16 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
     ssgAll.sort((a, b) => b.w - a.w);
     r.ssgTop5 = ssgAll.slice(0, 5);
 
-    // =========================================
-    // 6. SACs
-    // =========================================
+    // 6. SAC
     for (const row of dSac) {
         if (String(row[18] || "").trim() !== ac) continue;
         const fStr = toYMD(row[19]);
         if (!fStr) continue;
-        if (fStr >= dInicio && fStr <= dFin) {
-            r.sacs.push({ s: row[1] || "", f: new Date(row[19]).getTime(), e: row[3] || "" });
-        }
+        if (fStr >= dInicio && fStr <= dFin) r.sacs.push({ s: row[1] || "", f: new Date(row[19]).getTime(), e: row[3] || "" });
         if (fStr >= dInicioAnt && fStr <= dFinAnt) r.pSac++;
     }
 
-    // =========================================
     // 7. Remates
-    // =========================================
     const remIds = {}, pRemIds = {};
     for (const row of dRem) {
         if (String(row[2] || "").trim() !== ac) continue;
@@ -292,21 +303,17 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
     return r;
 }
 
-// =========================================
-// Google Sheets Auth Helper
-// =========================================
 function getSheetsApi() {
     let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
     let key = process.env.GOOGLE_PRIVATE_KEY || "";
-    if (email.startsWith('{')) {
-        try { const p = JSON.parse(email); email = p.client_email; key = p.private_key; } catch (e) { }
-    }
+    if (email.startsWith('{')) { try { const p = JSON.parse(email); email = p.client_email; key = p.private_key; } catch (e) { } }
     if (!email || !key) return null;
     key = key.trim().replace(/\\n/g, '\n');
     if (!key.includes("---")) key = "-----BEGIN PRIVATE KEY-----\n" + key + "\n-----END PRIVATE KEY-----";
-    const auth = new google.auth.GoogleAuth({
-        credentials: { client_email: email, private_key: key },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    return google.sheets({
+        version: 'v4', auth: new google.auth.GoogleAuth({
+            credentials: { client_email: email, private_key: key },
+            scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+        })
     });
-    return google.sheets({ version: 'v4', auth });
 }
