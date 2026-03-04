@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- REPORTE SEMANAL v6.5 - PROGRESSIVE UI -->
+<!-- REPORTE SEMANAL v11.6 - ENGINE RECONSTRUCTION -->
 
 <head>
   <base target="_top">
@@ -43,7 +43,6 @@
       line-height: 1.6
     }
 
-    /* GLASSMORPHISM HEADER */
     .ctrl {
       background: rgba(255, 255, 255, 0.8);
       backdrop-filter: blur(10px);
@@ -78,10 +77,6 @@
       transition: .2s;
     }
 
-    .ctrl select:hover {
-      border-color: var(--g500)
-    }
-
     .btn {
       font-family: inherit;
       font-size: 13px;
@@ -93,7 +88,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all .2s;
     }
 
     .btn-p {
@@ -101,26 +96,18 @@
       color: #fff
     }
 
-    .btn-p:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2)
-    }
-
-    /* LAYOUT */
     .rc {
       max-width: 1050px;
       margin: 0 auto;
       padding: 24px
     }
 
-    /* MODERN CARDS */
     .sec {
       background: #fff;
       border-radius: var(--rad);
       box-shadow: var(--sh);
       padding: 24px;
       margin-bottom: 20px;
-      border: 1px solid rgba(0, 0, 0, 0.02)
     }
 
     .rh {
@@ -140,7 +127,6 @@
     .rsub {
       font-size: 12px;
       color: var(--gr500);
-      margin-top: 2px
     }
 
     .kpi-row {
@@ -151,16 +137,10 @@
     }
 
     .kpi-big {
-      border: 1.5px solid var(--gr100);
+      border: 1.5px solid var(--gr200);
       border-radius: var(--rad);
       padding: 24px;
       background: #fff;
-      transition: .2s
-    }
-
-    .kpi-big:hover {
-      border-color: var(--g500);
-      transform: scale(1.01)
     }
 
     .kpi-label {
@@ -176,7 +156,6 @@
       font-size: 48px;
       font-weight: 800;
       color: var(--gr900);
-      margin: 4px 0
     }
 
     .kpi-sm-row {
@@ -187,7 +166,7 @@
     }
 
     .kpi-sm {
-      border: 1.5px solid var(--gr100);
+      border: 1.5px solid var(--gr200);
       border-radius: var(--rs);
       padding: 16px;
       background: #fff;
@@ -200,7 +179,6 @@
       color: var(--gr900)
     }
 
-    /* SKELETON ANIMATION */
     .skeleton {
       background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
       background-size: 200% 100%;
@@ -219,19 +197,6 @@
       100% {
         background-position: -200% 0
       }
-    }
-
-    /* PROGRESSIVE CHART */
-    .chart-container {
-      height: 220px;
-      position: relative;
-      margin-top: 10px
-    }
-
-    /* TABLES */
-    .tw {
-      overflow-x: auto;
-      margin-top: 10px
     }
 
     table {
@@ -253,17 +218,12 @@
     td {
       padding: 12px;
       border-bottom: 1px solid var(--gr50);
-      color: #4b5563
-    }
-
-    tr:hover td {
-      background: var(--gr50)
     }
 
     .badge {
       padding: 4px 12px;
       border-radius: 20px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       text-transform: uppercase
     }
@@ -273,7 +233,6 @@
       color: var(--g700)
     }
 
-    /* LOADER */
     .lo {
       display: none;
       position: fixed;
@@ -318,7 +277,7 @@
       <label>SEMANA</label>
       <select id="selSem" onchange="startReport()"></select>
     </div>
-    <div class="mla"><button class="btn btn-p" onclick="exportPDF()">Exportar PDF</button></div>
+    <div style="margin-left:auto"><button class="btn btn-p" onclick="exportPDF()">Exportar PDF</button></div>
   </div>
 
   <div class="lo" id="globalLoader">
@@ -327,300 +286,216 @@
   </div>
 
   <div class="rc">
-    <!-- PLACEHOLDER / INICIAL -->
     <div id="initialState" style="text-align:center; padding:100px 0">
       <h2 style="font-size:32px; font-weight:800; color:var(--gr900)">Reporte Semanal de Gestión</h2>
-      <p style="color:var(--gr400); margin-top:8px">Seleccione un Comercial asociado y la semana para visualizar el
-        rendimiento.</p>
+      <p style="color:var(--gr400); margin-top:8px">Seleccione un Comercial asociado y la semana.</p>
     </div>
 
-    <!-- EL REPORTE (Se llena progresivamente) -->
     <div id="rptFrame" style="display:none">
       <div class="sec rh">
         <div>
-          <div class="rt" id="rptTitle">Asociado &mdash; Cargando...</div>
-          <div class="rsub">Gestión comercial unificada (Metabase + CRM)</div>
+          <div class="rt" id="rptTitle">Cargando...</div>
+          <div class="rsub">Gestión comercial unificada</div>
           <div style="margin-top:10px; display:flex; gap:8px" id="rptMeta">
-            <span class="badge b-g">Semana <span class="skel-val">...</span></span>
             <span class="badge b-g" id="rptDates">...</span>
           </div>
         </div>
         <div id="rptBadge"><span class="badge b-g">Procesando...</span></div>
       </div>
 
-      <!-- KPIs PRINCIPALES -->
       <div class="kpi-row">
         <div class="kpi-big">
           <div class="kpi-label">Cabezas Ofrecidas</div>
-          <div class="kpi-val" id="valCab"><span class="skeleton" style="width:100px"></span></div>
-          <div style="font-size:12px; color:var(--gr400)" id="metaCab">Cargando tropa y eficacia...</div>
+          <div class="kpi-val" id="valCab">0</div>
+          <div style="font-size:12px; color:var(--gr400)" id="metaCab">...</div>
         </div>
         <div class="kpi-big">
           <div class="kpi-label">Cabezas Concretadas</div>
-          <div class="kpi-val" id="valConc"><span class="skeleton" style="width:100px"></span></div>
-          <div style="font-size:12px; color:var(--gr400)" id="metaConc">Cargando ventas y compras...</div>
+          <div class="kpi-val" id="valConc">0</div>
+          <div style="font-size:12px; color:var(--gr400)" id="metaConc">...</div>
         </div>
       </div>
 
-      <!-- KPIs SECUNDARIOS -->
       <div class="kpi-sm-row">
         <div class="kpi-sm">
           <div class="kpi-label">Soc. Gestión</div>
-          <div class="kpi-sm-val" id="smSG">-</div>
+          <div class="kpi-sm-val" id="smSG">0</div>
         </div>
         <div class="kpi-sm">
           <div class="kpi-label">Cargas</div>
-          <div class="kpi-sm-val" id="smCarg">-</div>
+          <div class="kpi-sm-val" id="smCarg">0</div>
         </div>
         <div class="kpi-sm">
           <div class="kpi-label">SACs</div>
-          <div class="kpi-sm-val" id="smSac">-</div>
+          <div class="kpi-sm-val" id="smSac">0</div>
         </div>
         <div class="kpi-sm">
           <div class="kpi-label">Remates</div>
-          <div class="kpi-sm-val" id="smRem">-</div>
+          <div class="kpi-sm-val" id="smRem">0</div>
         </div>
         <div class="kpi-sm">
           <div class="kpi-label">Nuevas</div>
-          <div class="kpi-sm-val" id="smNue">-</div>
+          <div class="kpi-sm-val" id="smNue">0</div>
         </div>
       </div>
 
-      <!-- GRÁFICO -->
       <div class="sec">
         <div class="kpi-label" style="margin-bottom:15px">Actividad Proyectada x Día</div>
-        <div class="chart-container"><canvas id="mainChart"></canvas></div>
+        <div style="height:200px; position:relative"><canvas id="mainChart"></canvas></div>
       </div>
 
-      <!-- OPERACIONES -->
       <div class="sec">
         <div class="kpi-label">Top 5 Operaciones</div>
-        <div class="tw" id="opsTable">
-          <p style="padding:20px; text-align:center">Buscando negocios...</p>
-        </div>
+        <div id="opsTable" style="margin-top:10px; overflow-x:auto">...</div>
       </div>
     </div>
   </div>
 
   <script>
-    var CFG = null;
-    var DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+    const DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
 
-    // Iniciar con ACs
-    document.addEventListener('DOMContentLoaded', function () {
-      slo(true, 'Sincronizando con Google...');
+    document.addEventListener('DOMContentLoaded', () => {
       fetch("/api/report?op=config&cb=" + Date.now())
         .then(res => res.json())
         .then(data => {
-          CFG = data;
-          slo(false);
-          if (data.error) throw new Error(data.error);
-          popSels(data);
-        })
-        .catch(e => { slo(false); alert("Error al conectar: " + e.message); });
+          const sA = document.getElementById('selAC');
+          sA.innerHTML = '<option value="">-- ELIGE UN ASOCIADO --</option>';
+          data.acs.forEach(ac => {
+            const o = document.createElement('option');
+            o.value = ac; o.textContent = ac; sA.appendChild(o);
+          });
+          const sS = document.getElementById('selSem');
+          data.semanas.forEach(s => {
+            const o = document.createElement('option');
+            o.value = `${s.n}|${s.s}|${s.e}`;
+            o.textContent = `Sem ${s.n} (${fmt(s.s)})`;
+            sS.appendChild(o);
+          });
+        });
     });
 
-    function slo(on, txt) { document.getElementById('globalLoader').classList.toggle('on', !!on); if (txt) document.getElementById('ltxt').textContent = txt; }
-
-    function popSels(d) {
-      var sA = document.getElementById('selAC');
-      sA.innerHTML = '<option value="">-- ELIGE UN ASOCIADO --</option>';
-      for (var i = 0; i < d.acs.length; i++) {
-        var o = document.createElement('option'); o.value = d.acs[i]; o.textContent = d.acs[i]; sA.appendChild(o);
-      }
-      var sS = document.getElementById('selSem');
-      sS.innerHTML = '';
-      var sems = d.semanas || [];
-      for (var j = 0; j < sems.length; j++) {
-        var s = sems[j];
-        var o = document.createElement('option');
-        o.value = s.n + '|' + s.s + '|' + s.e + '|' + s.y;
-        o.textContent = 'Sem ' + s.n + ' (' + fmt(s.s) + ')';
-        sS.appendChild(o);
-      }
-    }
-
     function startReport() {
-      var ac = document.getElementById('selAC').value;
-      var semVal = document.getElementById('selSem').value;
-      if (!ac || !semVal) return;
+      const ac = document.getElementById('selAC').value;
+      const sem = document.getElementById('selSem').value;
+      if (!ac || !sem) return;
 
       document.getElementById('initialState').style.display = 'none';
       document.getElementById('rptFrame').style.display = 'block';
-      document.getElementById('rptTitle').textContent = ac + ' — Cargando Informe';
-      resetSkeletons();
+      document.getElementById('rptTitle').textContent = ac;
 
-      var p = semVal.split('|');
+      const p = sem.split('|');
       const startTs = p[1], endTs = p[2];
-      document.getElementById('rptDates').textContent = fmt(+startTs) + ' al ' + fmt(+endTs);
+      document.getElementById('rptDates').textContent = `${fmt(+startTs)} al ${fmt(+endTs)}`;
 
-      // PROCESO DE CARGA POR BLOQUES (Evita timeouts de Vercel)
-      const cards = [
-        { id: '3588', n: 'Ofrecimientos' },
-        { id: '3584', n: 'Operaciones' },
-        { id: '3507', n: 'Stock (BC)' },
-        { id: '3480', n: 'Actividad' }
-      ];
-
-      var results = { base: [], ops: [], act: [], bc: [], vR: [] };
-      var loadedCount = 0;
-
-      function checkDone() {
-        loadedCount++;
-        document.getElementById('ltxt').textContent = "Cargando componentes (" + loadedCount + "/5)...";
-        if (loadedCount === 5) {
-          document.getElementById('rptBadge').innerHTML = '<span class="badge b-g">DATOS SINCRONIZADOS</span>';
-          assembleAndRender(results, ac, startTs, endTs);
-          document.getElementById('globalLoader').classList.remove('on');
-        }
-      }
-
-      document.getElementById('rptBadge').innerHTML = '<span class="badge b-g" style="background:#fef3c7; color:#92400e">Sincronizando Metabase...</span>';
       document.getElementById('globalLoader').classList.add('on');
-      document.getElementById('ltxt').textContent = "Iniciando descarga segmentada...";
+      document.getElementById('ltxt').textContent = "Sincronizando fuentes...";
 
-      // Fetch Cards en Paralelo pero cada una con su propio tiempo
-      cards.forEach(c => {
-        fetch("/api/report?op=fetchCard&cardId=" + c.id + "&ac=" + encodeURIComponent(ac))
-          .then(res => res.json())
-          .then(res => {
-            if (c.id === '3588') results.base = res.data;
-            if (c.id === '3584') results.ops = res.data;
-            if (c.id === '3480') results.act = res.data;
-            if (c.id === '3507') results.bc = res.data;
-            checkDone();
-          })
-          .catch(err => { console.error("Error en card " + c.id, err); checkDone(); });
-      });
+      const results = { base: [], ops: [], vR: [] };
+      let loaded = 0;
 
-      // Google Sheets
-      fetch("/api/report?op=fetchSheets")
-        .then(res => res.json())
-        .then(res => { results.vR = res.vR; checkDone(); })
-        .catch(err => { console.error("Error en Sheets", err); checkDone(); });
+      const check = () => {
+        loaded++;
+        if (loaded === 3) assemble(results, ac, startTs, endTs);
+      };
+
+      fetch(`/api/report?op=fetchCard&cardId=3588&ac=${encodeURIComponent(ac)}`).then(res => res.json()).then(r => { results.base = r.data || []; check(); });
+      fetch(`/api/report?op=fetchCard&cardId=3584&ac=${encodeURIComponent(ac)}`).then(res => res.json()).then(r => { results.ops = r.data || []; check(); });
+      fetch(`/api/report?op=fetchSheets`).then(res => res.json()).then(r => { results.vR = r.vR || []; check(); });
     }
 
-    // Procesa todo en el cliente para máxima velocidad (ya que el servidor ya filtró x AC)
-    function assembleAndRender(data, ac, startTs, endTs) {
-      // Re-utilizamos la lógica de procesamiento (simplificada para el cliente)
+    function assemble(data, acEmail, startTs, endTs) {
       const dIn = new Date(+startTs); dIn.setUTCHours(0, 0, 0, 0);
       const dFi = new Date(+endTs); dFi.setUTCHours(23, 59, 59, 999);
-      const dInAnt = new Date(startTs - 604800000);
-      const dFiAnt = new Date(endTs - 604800000);
+      const fYMD = (d) => d ? d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, "0") + String(d.getUTCDate()).padStart(2, "0") : "0";
+      const dI = fYMD(dIn), dF = fYMD(dFi);
 
-      const fYMD = (d) => d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
-      const dI = fYMD(dIn), dF = fYMD(dFi), dIA = fYMD(dInAnt), dFA = fYMD(dFiAnt);
+      const targetAlias = acEmail.split('@')[0].toLowerCase();
+      const isMe = (n) => {
+        if (!n) return false;
+        const s = String(n).toLowerCase();
+        return s.includes(targetAlias) || targetAlias.includes(s.split(' ')[0]);
+      };
 
-      let cab = 0, trop = 0, dT = [0, 0, 0, 0, 0, 0, 0], cccNum = 0;
-      data.base.forEach(row => {
-        const dObj = new Date(row.fecha_publicaciones || row.fecha);
+      let cab = 0, trop = 0, dT = [0, 0, 0, 0, 0, 0, 0], ccc = 0;
+      data.base.forEach(r => {
+        const rowAc = r.AC_Vend || r.ac_vend || r.ac || "";
+        if (!isMe(rowAc)) return;
+        const dObj = new Date(r.fecha_publicaciones || r.fecha);
         const fs = fYMD(dObj);
-        const c = Number(row.Cabezas || 0);
         if (fs >= dI && fs <= dF) {
-          cab += c; trop++;
-          if (String(row.ESTADO || "").toUpperCase().includes("CONCRETADA")) cccNum++;
-          const dIdx = dObj.getUTCDay();
-          dT[dIdx === 0 ? 6 : dIdx - 1]++;
+          const q = Number(r.Cabezas || 0);
+          cab += q; trop++;
+          if (String(r.ESTADO || "").toUpperCase().includes("CONCRETADA")) ccc++;
+          const idx = dObj.getUTCDay();
+          dT[idx === 0 ? 6 : idx - 1]++;
         }
       });
 
-      let cabV = 0, cabC = 0, trConc = 0, top5 = [];
-      data.ops.forEach(row => {
-        const dObj = new Date(row.fecha_operacion || row.fecha);
+      let cabV = 0, cabC = 0, opsCount = 0, top5 = [];
+      data.ops.forEach(r => {
+        const v = r.asoc_com_vend || "";
+        const c = r.asoc_com_compra || "";
+        const meV = isMe(v), meC = isMe(c);
+        if (!meV && !meC) return;
+        const dObj = new Date(r.fecha_operacion || r.fecha);
         const fs = fYMD(dObj);
         if (fs >= dI && fs <= dF) {
-          const q = Number(row.Q || 0);
-          if (String(row.asoc_com_vend || "").toLowerCase().trim() === ac.toLowerCase().trim()) cabV += q;
-          if (String(row.asoc_com_compra || "").toLowerCase().trim() === ac.toLowerCase().trim()) cabC += q;
-          trConc++;
-          const fmtD = dObj.getUTCDate().toString().padStart(2, '0') + '/' + (dObj.getUTCMonth() + 1).toString().padStart(2, '0');
-          top5.push({ q, d: [row.ID, row.UN, row.RS_Vendedora || row.RS_Compradora, "", "", "", fmtD, q, "", "", row.Cat] });
+          const q = Number(r.Q || 0);
+          if (meV) cabV += q; if (meC) cabC += q;
+          opsCount++;
+          const fd = dObj.getUTCDate().toString().padStart(2, '0') + '/' + (dObj.getUTCMonth() + 1).toString().padStart(2, '0');
+          top5.push({ q, d: [r.ID, r.UN, r.RS_Vendedora || r.RS_Compradora, fd, r.Cat] });
         }
       });
-      top5.sort((a, b) => b.q - a.q);
 
-      // Renderizados
       document.getElementById('valCab').textContent = cab.toLocaleString();
-      document.getElementById('metaCab').textContent = trop + ' Tropas · ' + (trop > 0 ? Math.round(cccNum / trop * 100) + '%' : '0%') + ' CCC';
+      document.getElementById('metaCab').textContent = `${trop} Tropas · ${trop > 0 ? Math.round(ccc / trop * 100) : 0}% CCC`;
       document.getElementById('valConc').textContent = (cabV + cabC).toLocaleString();
-      document.getElementById('metaConc').textContent = trConc + ' Operaciones Registradas';
+      document.getElementById('metaConc').textContent = `${opsCount} Operaciones`;
 
-      // CRM & Otros (Simplificado por ahora)
-      if (data.vR && data.vR.length >= 6) {
-        var com = 0, age = 0;
-        (data.vR[0].values || []).forEach(r => { if (String(r[5]).toLowerCase().trim() === ac.toLowerCase().trim()) com++; });
-        document.getElementById('smSG').textContent = com;
-        document.getElementById('smSac').textContent = (data.vR[4].values || []).filter(r => String(r[18]).toLowerCase().trim() === ac.toLowerCase().trim()).length;
-        document.getElementById('smRem').textContent = (data.vR[5].values || []).filter(r => String(r[2]).toLowerCase().trim() === ac.toLowerCase().trim()).length;
+      if (data.vR.length >= 6) {
+        document.getElementById('smSG').textContent = (data.vR[0].values || []).filter(r => isMe(r[5])).length;
+        document.getElementById('smSac').textContent = (data.vR[4].values || []).filter(r => isMe(r[18])).length;
+        document.getElementById('smRem').textContent = (data.vR[5].values || []).filter(r => isMe(r[2])).length;
       }
 
-      renderOpsTable(top5.slice(0, 5));
       drawChart(dT);
+      renderTable(top5.sort((a, b) => b.q - a.q).slice(0, 5));
+      document.getElementById('globalLoader').classList.remove('on');
     }
 
-    function resetSkeletons() {
-      var sk = '<span class="skeleton" style="width:60px"></span>';
-      document.getElementById('valCab').innerHTML = sk;
-      document.getElementById('valConc').innerHTML = sk;
-      document.getElementById('smSG').innerHTML = '-';
-      document.getElementById('smCarg').innerHTML = '-';
-      document.getElementById('smSac').innerHTML = '-';
-      document.getElementById('smRem').innerHTML = '-';
-      document.getElementById('smNue').innerHTML = '-';
-    }
-
-    function renderOpsTable(ops) {
-      if (!ops || ops.length === 0) {
-        document.getElementById('opsTable').innerHTML = '<p style="padding:20px; text-align:center; color:var(--gr400)">Sin operaciones detectadas en esta semana</p>';
-        return;
-      }
-      var h = '<table><thead><tr><th>ID</th><th>Vendedor</th><th>Fecha</th><th>Q</th><th>Cat</th></tr></thead><tbody>';
-      for (var i = 0; i < ops.length; i++) {
-        var r = ops[i].d;
-        h += '<tr><td>' + r[0] + '</td><td style="font-weight:700">' + r[2] + '</td><td>' + r[6] + '</td><td style="color:var(--g700); font-weight:800">' + (r[7] || 0).toLocaleString() + '</td><td>' + r[10] + '</td></tr>';
-      }
-      h += '</tbody></table>';
-      document.getElementById('opsTable').innerHTML = h;
+    function renderTable(ops) {
+      let h = '<table><thead><tr><th>ID</th><th>UN</th><th>Sociedad</th><th>Fecha</th><th>Q</th></tr></thead><tbody>';
+      ops.forEach(o => {
+        h += `<tr><td>${o.d[0]}</td><td>${o.d[1]}</td><td>${o.d[2]}</td><td>${o.d[3]}</td><td style="font-weight:800">${o.q.toLocaleString()}</td></tr>`;
+      });
+      document.getElementById('opsTable').innerHTML = h + '</tbody></table>';
     }
 
     function drawChart(tr) {
-      var canvas = document.getElementById('mainChart');
-      if (!canvas) return;
-      var ctx = canvas.getContext('2d');
-      var W = canvas.parentElement.offsetWidth, H = 220;
-      canvas.width = W; canvas.height = H;
-
-      var max = 1; for (var i = 0; i < 7; i++) if (tr[i] > max) max = tr[i];
-      max = Math.ceil(max * 1.3);
-      var bw = (W - 60) / 7;
-
+      const c = document.getElementById('mainChart');
+      const ctx = c.getContext('2d');
+      const W = c.parentElement.offsetWidth, H = 200;
+      c.width = W; c.height = H;
+      const max = Math.max(...tr, 1) * 1.2;
+      const bw = W / 7;
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#f3f4f6';
-      for (var i = 0; i < 7; i++) {
-        var h = (tr[i] / max) * (H - 40);
-        ctx.fillRect(40 + i * bw + bw * 0.2, H - 30 - h, bw * 0.6, h);
+      tr.forEach((v, i) => {
+        const h = (v / max) * (H - 40);
         ctx.fillStyle = '#10b981';
-        ctx.fillRect(40 + i * bw + bw * 0.2, H - 30 - h, bw * 0.6, h);
-        ctx.fillStyle = '#9ca3af'; ctx.font = '10px DM Sans'; ctx.textAlign = 'center';
-        ctx.fillText(DIAS[i], 40 + i * bw + bw / 2, H - 10);
-        ctx.fillStyle = '#f3f4f6';
-      }
+        ctx.fillRect(i * bw + bw * 0.2, H - 30 - h, bw * 0.6, h);
+        ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(DIAS[i], i * bw + bw / 2, H - 10);
+      });
     }
 
     function fmt(v) {
-      var d = new Date(v);
-      return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0');
-    }
-
-    function fmt(v) {
-      var d = new Date(v);
-      return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0');
+      const d = new Date(v);
+      return d.getUTCDate().toString().padStart(2, '0') + '/' + (d.getUTCMonth() + 1).toString().padStart(2, '0');
     }
 
     function exportPDF() {
-      var rpt = document.getElementById('rptFrame');
-      var opt = { margin: 10, filename: 'Reporte_Vercel.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-      html2pdf().from(rpt).set(opt).save();
+      html2pdf().from(document.getElementById('rptFrame')).set({ margin: 10, filename: 'Reporte.pdf', html2canvas: { scale: 2 } }).save();
     }
   </script>
 </body>
