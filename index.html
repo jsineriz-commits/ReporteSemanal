@@ -453,9 +453,9 @@
       var p = semVal.split('|');
       document.getElementById('rptDates').textContent = fmt(+p[1]) + ' al ' + fmt(+p[2]);
 
-      // Fetch con timeout de 25 seg para evitar que quede colgado
+      // Fetch con timeout extendido para darle tiempo a Metabase (especialmente la primera carga)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
 
       fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2] + "&v=" + Date.now(), { signal: controller.signal })
         .then(res => {
@@ -466,13 +466,16 @@
         .then(r => {
           if (r.error) throw new Error(r.error);
           renderRealData(r);
+          if (r._cached) {
+            console.log("Cargado desde Caché Turbo");
+          }
         })
         .catch(e => {
           clearTimeout(timeoutId);
           console.error(e);
-          var msg = e.name === 'AbortError' ? "Tiempo de espera agotado (Vercel tardó demasiado). Reintente." : e.message;
+          var msg = e.name === 'AbortError' ? "El servidor de Metabase está tardando mucho en responder (Límite 60s). La primera vez es normal, por favor reintente en 5 segundos." : e.message;
           alert("Aviso: " + msg);
-          renderRealData({}); // Mostrar ceros si falla
+          renderRealData({});
         });
     }
 
