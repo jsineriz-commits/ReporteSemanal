@@ -40,11 +40,12 @@ module.exports = async function handler(req, res) {
 
         } else if (op === "report") {
             const sessId = await getMetabaseSession();
-            // Fetch everything in parallel (Added 3480: ULT_ACT)
-            const [baseRows, opsRows, actRows, sheetsData] = await Promise.all([
+            // Fetch everything in parallel (Added 3507: BCFULL)
+            const [baseRows, opsRows, actRows, bcRows, sheetsData] = await Promise.all([
                 queryCard(sessId, 3588), // BASE
                 queryCard(sessId, 3584), // OPS
                 queryCard(sessId, 3480), // ULT_ACT
+                queryCard(sessId, 3507), // BCFULL
                 api.spreadsheets.values.batchGet({
                     spreadsheetId: SPREADSHEET_ID,
                     ranges: ['Comentarios_CRM!A2:H', 'Agenda_CRM!A2:E', 'Leads_CRM!A2:L', 'aux leads!A2:AS', 'SAC!A2:T', 'REMATES!A2:D']
@@ -52,7 +53,7 @@ module.exports = async function handler(req, res) {
             ]);
 
             const vR = sheetsData.data.valueRanges;
-            const r = processReportFixed(baseRows, opsRows, actRows, vR, ac, Number(startTs), Number(endTs));
+            const r = processReportFixed(baseRows, opsRows, actRows, bcRows, vR, ac, Number(startTs), Number(endTs));
             return res.status(200).json(r);
         }
     } catch (e) {
@@ -60,7 +61,7 @@ module.exports = async function handler(req, res) {
     }
 };
 
-function processReportFixed(baseRows, opsRows, actRows, vR, ac, startTs, endTs) {
+function processReportFixed(baseRows, opsRows, actRows, bcRows, vR, ac, startTs, endTs) {
     const dIn = new Date(startTs); dIn.setUTCHours(0, 0, 0, 0);
     const dFi = new Date(endTs); dFi.setUTCHours(23, 59, 59, 999);
     const dInAnt = new Date(startTs - 604800000); dInAnt.setUTCHours(0, 0, 0, 0);
@@ -75,7 +76,8 @@ function processReportFixed(baseRows, opsRows, actRows, vR, ac, startTs, endTs) 
         tSG: 0, pTSG: 0, com: 0, age: 0, nuevas: 0, pNuevas: 0,
         socSinGestNum: 0, ssgTop5: [], actSemanal: [],
         sacs: [], pSac: 0, rem: 0, pRem: 0,
-        carg: 0, cargProp: 0, cargAjen: 0
+        carg: 0, cargProp: 0, cargAjen: 0,
+        bcData: [] // For storing BCFULL metrics if needed
     };
 
     // BASE (Query 3588) Mapping
