@@ -1,6 +1,6 @@
 /**
- * Vercel Serverless API - Reporte Semanal 7.0 (Ultra-Robust)
- * Mapeo completo de 4 Cards de Metabase + Google Sheets
+ * Vercel Serverless API - Reporte Semanal 8.0 (Turbo Cache)
+ * Implementa Caché en memoria para Metabase (10 min) para velocidad instantánea.
  */
 const { google } = require('googleapis');
 
@@ -9,16 +9,26 @@ const METABASE_USER = process.env.METABASE_USER || "";
 const METABASE_PASS = process.env.METABASE_PASS || "";
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID || "";
 
+// --- SISTEMA DE CACHÉ GLOBAL ---
+// Vercel mantiene los procesos calientes unos minutos, aprovechamos esto.
+let globalCache = {
+    session: { id: null, expiry: 0 },
+    cards: {}, // Para guardar resultados de cards
+    lastFetch: 0
+};
+const SESSION_TTL = 60 * 60 * 1000; // 1 hora sesión
+const DATA_TTL = 10 * 60 * 1000;    // 10 minutos datos Metabase
+
 module.exports = async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     if (req.method === "OPTIONS") return res.status(200).end();
 
-    const { op, ac, startTs, endTs } = req.query;
+    const { op, ac, startTs, endTs, force } = req.query;
 
     try {
         const api = getSheetsApi();
-        if (!api) throw new Error("Error de Auth Google: Verifique Service Account Email y Private Key en Vercel.");
+        if (!api) throw new Error("Error de Auth Google");
 
         if (op === "config") {
             const response = await api.spreadsheets.values.get({
@@ -39,47 +49,54 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ acs: Array.from(acSet).sort(), semanas });
 
         } else if (op === "report") {
-            if (!ac) throw new Error("Falta el nombre del Asociado (ac)");
+            if (!ac) throw new Error("Falta Asociado");
 
-            const sessId = await getMetabaseSession();
+            const now = Date.now();
+            let baseRows, opsRows, actRows, bcRows;
 
-            // Fetch everything in parallel with error isolation
-            const fetchResults = await Promise.allSettled([
-                queryCard(sessId, 3588), // BASE
-                queryCard(sessId, 3584), // OPS
-                queryCard(sessId, 3480), // ULT_ACT
-                queryCard(sessId, 3507), // BCFULL
-                api.spreadsheets.values.batchGet({
-                    spreadsheetId: SPREADSHEET_ID,
-                    ranges: ['Comentarios_CRM!A2:H', 'Agenda_CRM!A2:E', 'Leads_CRM!A2:L', 'aux leads!A2:AS', 'SAC!A2:T', 'REMATES!A2:D']
-                })
-            ]);
+            // ¿Usar Caché? (A menos que force=1)
+            const isCacheValid = (now - globalCache.lastFetch < DATA_TTL) && !force;
 
-            const [base, ops, act, bc, sheets] = fetchResults;
+            if (isCacheValid && globalCache.cards[3588]) {
+                console.log("Serving from Cache...");
+                baseRows = globalCache.cards[3588];
+                opsRows = globalCache.cards[3584];
+                actRows = globalCache.cards[3480];
+                bcRows = globalCache.cards[3507];
+            } else {
+                console.log("Fetching fresh data from Metabase...");
+                const sessId = await getMetabaseSession();
+                const results = await Promise.allSettled([
+                    queryCard(sessId, 3588),
+                    queryCard(sessId, 3584),
+                    queryCard(sessId, 3480),
+                    queryCard(sessId, 3507)
+                ]);
 
-            // Handle failures in individual fetches
-            const baseRows = base.status === 'fulfilled' ? base.value : [];
-            const opsRows = ops.status === 'fulfilled' ? ops.value : [];
-            const actRows = act.status === 'fulfilled' ? act.value : [];
-            const bcRows = bc.status === 'fulfilled' ? bc.value : [];
-            const sheetsData = sheets.status === 'fulfilled' ? sheets.value : { data: { valueRanges: [] } };
+                baseRows = results[0].status === 'fulfilled' ? results[0].value : [];
+                opsRows = results[1].status === 'fulfilled' ? results[1].value : [];
+                actRows = results[2].status === 'fulfilled' ? results[2].value : [];
+                bcRows = results[3].status === 'fulfilled' ? results[3].value : [];
+
+                // Guardar en caché
+                globalCache.cards[3588] = baseRows;
+                globalCache.cards[3584] = opsRows;
+                globalCache.cards[3480] = actRows;
+                globalCache.cards[3507] = bcRows;
+                globalCache.lastFetch = now;
+            }
+
+            // Google Sheets siempre se trae fresco porque suele ser rápido y cambia mucho
+            const sheetsData = await api.spreadsheets.values.batchGet({
+                spreadsheetId: SPREADSHEET_ID,
+                ranges: ['Comentarios_CRM!A2:H', 'Agenda_CRM!A2:E', 'Leads_CRM!A2:L', 'aux leads!A2:AS', 'SAC!A2:T', 'REMATES!A2:D']
+            });
 
             const vR = sheetsData.data.valueRanges || [];
             const r = processReportFixed(baseRows, opsRows, actRows, bcRows, vR, ac, Number(startTs), Number(endTs));
 
-            // Add debug info to help user
-            r._debug = {
-                baseTotal: baseRows.length,
-                opsTotal: opsRows.length,
-                sheetsFound: vR.length > 0,
-                status: {
-                    base: base.status,
-                    ops: ops.status,
-                    act: act.status,
-                    bc: bc.status,
-                    sheets: sheets.status
-                }
-            };
+            r._cached = isCacheValid;
+            r._time = new Date(globalCache.lastFetch).toLocaleTimeString();
 
             return res.status(200).json(r);
         }
@@ -89,17 +106,12 @@ module.exports = async function handler(req, res) {
 };
 
 function processReportFixed(baseRows, opsRows, actRows, bcRows, vR, ac, startTs, endTs) {
-    // Definir rangos
     const dIn = new Date(startTs); dIn.setUTCHours(0, 0, 0, 0);
     const dFi = new Date(endTs); dFi.setUTCHours(23, 59, 59, 999);
     const dInAnt = new Date(startTs - 604800000); dInAnt.setUTCHours(0, 0, 0, 0);
     const dFiAnt = new Date(endTs - 604800000); dFiAnt.setUTCHours(23, 59, 59, 999);
 
-    const fYMD = (d) => {
-        if (!d || isNaN(d.getTime())) return "00000000";
-        return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-    };
-
+    const fYMD = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
     const dInicio = fYMD(dIn), dFin = fYMD(dFi), dInicioAnt = fYMD(dInAnt), dFinAnt = fYMD(dFiAnt);
 
     const r = {
@@ -111,39 +123,27 @@ function processReportFixed(baseRows, opsRows, actRows, bcRows, vR, ac, startTs,
         carg: 0, cargProp: 0, cargAjen: 0
     };
 
-    // Safe Date Parser
-    const parseDateStr = (val) => {
-        if (!val) return null;
-        const d = new Date(val);
-        return isNaN(d.getTime()) ? null : d;
-    };
+    const parseDate = (v) => { if (!v) return null; let d = new Date(v); return isNaN(d.getTime()) ? null : d; };
 
     // BASE (3588)
     const socS = {};
     for (const row of baseRows) {
-        const rowAC = String(row.AC_Vend || row.ac_vend || row.ac || "").trim();
-        if (rowAC.toLowerCase() !== ac.toLowerCase()) continue;
-
-        const dObj = parseDateStr(row.fecha_publicaciones || row.fecha);
+        if (String(row.AC_Vend || row.ac || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
+        const dObj = parseDate(row.fecha_publicaciones || row.fecha);
         if (!dObj) continue;
         const fs = fYMD(dObj);
-
-        const est = String(row.ESTADO || row.estado || "").toUpperCase();
-        const cab = Number(row.Cabezas || row.cabezas || row.cab || 0);
+        const est = String(row.ESTADO || "").toUpperCase();
+        const cab = Number(row.Cabezas || 0);
 
         if (fs >= dInicio && fs <= dFin) {
-            r.cab += cab;
-            r.trop++;
+            r.cab += cab; r.trop++;
             if (est.includes("CONCRETADA")) r.cccNum++;
             const soc = row.sociedad_vendedora || row.sociedad;
             if (soc) socS[soc] = 1;
-            const dIdx = dObj.getUTCDay(); // Usar UTC para evitar saltos de día
+            const dIdx = dObj.getUTCDay();
             r.dT[dIdx === 0 ? 6 : dIdx - 1]++;
         }
-        if (fs >= dInicioAnt && fs <= dFinAnt) {
-            r.pCab += cab;
-            r.pTrop++;
-        }
+        if (fs >= dInicioAnt && fs <= dFinAnt) { r.pCab += cab; r.pTrop++; }
     }
     r.socOf = Object.keys(socS).length;
     r.ccc = r.trop > 0 ? Math.round((r.cccNum / r.trop) * 100) + "%" : "0%";
@@ -151,79 +151,51 @@ function processReportFixed(baseRows, opsRows, actRows, bcRows, vR, ac, startTs,
     // OPS (3584)
     const socOps = {}, allOps = [];
     for (const row of opsRows) {
-        const dObj = parseDateStr(row.fecha_operacion || row.fecha);
+        const dObj = parseDate(row.fecha_operacion || row.fecha);
         if (!dObj) continue;
         const fs = fYMD(dObj);
+        const aV = String(row.asoc_com_vend || "").trim().toLowerCase();
+        const aC = String(row.asoc_com_compra || "").trim().toLowerCase();
+        const q = Number(row.Q || 0);
+        const targetAC = ac.toLowerCase();
 
-        const aV = String(row.asoc_com_vend || row.acv || "").trim();
-        const aC = String(row.asoc_com_compra || row.acc || "").trim();
-        const q = Number(row.Q || row.q || 0);
-
-        if (aV.toLowerCase() === ac.toLowerCase() || aC.toLowerCase() === ac.toLowerCase()) {
+        if (aV === targetAC || aC === targetAC) {
             if (fs >= dInicio && fs <= dFin) {
-                if (aV.toLowerCase() === ac.toLowerCase()) {
-                    r.cabV += q;
-                    const sV = row.RS_Vendedora || row.socv;
-                    if (sV) socOps[sV] = 1;
-                }
-                if (aC.toLowerCase() === ac.toLowerCase()) {
-                    r.cabC += q;
-                    const sC = row.RS_Compradora || row.socc;
-                    if (sC) socOps[sC] = 1;
-                }
+                if (aV === targetAC) { r.cabV += q; if (row.RS_Vendedora) socOps[row.RS_Vendedora] = 1; }
+                if (aC === targetAC) { r.cabC += q; if (row.RS_Compradora) socOps[row.RS_Compradora] = 1; }
                 r.trConc++;
-
                 const fmtD = dObj.getUTCDate().toString().padStart(2, '0') + '/' + (dObj.getUTCMonth() + 1).toString().padStart(2, '0');
-
-                allOps.push({
-                    q,
-                    d: [
-                        row.ID || row.id || "-",
-                        row.UN || row.un || "-",
-                        row.RS_Vendedora || row.socv || "-",
-                        aV,
-                        row.RS_Compradora || row.socc || "-",
-                        aC,
-                        fmtD,
-                        q,
-                        "",
-                        "",
-                        row.Cat || row.cat || "-"
-                    ]
-                });
+                allOps.push({ q, d: [row.ID || "-", row.UN || "-", row.RS_Vendedora || "-", row.asoc_com_vend, row.RS_Compradora || "-", row.asoc_com_compra, fmtD, q, "", "", row.Cat || "-"] });
             }
             if (fs >= dInicioAnt && fs <= dFinAnt) r.pConc += q;
         }
     }
     allOps.sort((a, b) => b.q - a.q); r.top5 = allOps.slice(0, 5); r.socOps = Object.keys(socOps).length;
 
-    // SHEETS processing
+    // SHEETS: CRM
     if (vR && vR.length >= 6) {
-        const dCom = vR[0].values || [], dAge = vR[1].values || [], dLeads = vR[2].values || [], dAux = vR[3].values || [], dSac = vR[4].values || [], dRem = vR[5].values || [];
-
-        const parseSDate = v => fYMD(parseDateStr(v));
+        const dCom = vR[0].values || [], dAge = vR[1].values || [], dSac = vR[4].values || [], dRem = vR[5].values || [];
         const sG = {};
         for (const row of dCom) {
             if (String(row[5] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
-            const fs = parseSDate(row[3]);
+            const fs = fYMD(parseDate(row[3]));
             if (fs >= dInicio && fs <= dFin) { r.com++; if (row[0]) sG[row[0]] = 1; }
         }
         for (const row of dAge) {
             if (String(row[3] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
-            const fs = parseSDate(row[4]);
+            const fs = fYMD(parseDate(row[4]));
             if (fs >= dInicio && fs <= dFin) { r.age++; if (row[1]) sG[row[1]] = 1; }
         }
         r.tSG = Object.keys(sG).length;
-
         for (const row of dSac) {
             if (String(row[18] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
-            const sd = parseDateStr(row[19]);
+            const sd = parseDate(row[19]);
             if (sd && fYMD(sd) >= dInicio && fYMD(sd) <= dFin) r.sacs.push({ s: row[1], f: sd.getTime(), e: row[3] });
         }
         const remIds = {};
         for (const row of dRem) {
             if (String(row[2] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
-            const fs = parseSDate(row[1]);
+            const fs = fYMD(parseDate(row[1]));
             if (fs >= dInicio && fs <= dFin) remIds[row[3] || row[0]] = 1;
         }
         r.rem = Object.keys(remIds).length;
@@ -232,7 +204,7 @@ function processReportFixed(baseRows, opsRows, actRows, bcRows, vR, ac, startTs,
     return r;
 }
 
-// Global Helpers
+// Helpers
 function getSheetsApi() {
     let e = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
     let k = process.env.GOOGLE_PRIVATE_KEY || "";
@@ -240,35 +212,19 @@ function getSheetsApi() {
     if (!e || !k) return null;
     k = k.trim().replace(/\\n/g, '\n');
     if (!k.includes("---")) k = "-----BEGIN PRIVATE KEY-----\n" + k + "\n-----END PRIVATE KEY-----";
-    const auth = new google.auth.GoogleAuth({ credentials: { client_email: e, private_key: k }, scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'] });
-    return google.sheets({ version: 'v4', auth });
+    return google.sheets({ version: 'v4', auth: new google.auth.GoogleAuth({ credentials: { client_email: e, private_key: k }, scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'] }) });
 }
 
 async function getMetabaseSession() {
-    try {
-        const res = await fetch(`${METABASE_URL}/api/session`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: METABASE_USER, password: METABASE_PASS })
-        });
-        if (!res.ok) throw new Error("Metabase Login Fallido (" + res.status + ")");
-        const d = await res.json();
-        return d.id;
-    } catch (err) {
-        throw new Error("No se pudo conectar con Metabase: " + err.message);
-    }
+    if (globalCache.session.id && Date.now() < globalCache.session.expiry) return globalCache.session.id;
+    const res = await fetch(`${METABASE_URL}/api/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: METABASE_USER, password: METABASE_PASS }) });
+    if (!res.ok) throw new Error("MB Auth Fail");
+    const d = await res.json();
+    globalCache.session = { id: d.id, expiry: Date.now() + SESSION_TTL };
+    return d.id;
 }
 
 async function queryCard(sessionId, cardId) {
-    try {
-        const res = await fetch(`${METABASE_URL}/api/card/${cardId}/query/json`, {
-            method: "POST",
-            headers: { "X-Metabase-Session": sessionId, "Content-Type": "application/json" }
-        });
-        if (!res.ok) throw new Error("Error en Card " + cardId + " (" + res.status + ")");
-        return res.json();
-    } catch (err) {
-        console.error("Metabase Query Error:", err);
-        return []; // Graceful failure
-    }
+    const res = await fetch(`${METABASE_URL}/api/card/${cardId}/query/json`, { method: "POST", headers: { "X-Metabase-Session": sessionId, "Content-Type": "application/json" } });
+    return res.ok ? res.json() : [];
 }
