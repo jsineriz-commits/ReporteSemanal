@@ -451,32 +451,111 @@
       resetSkeletons();
 
       var p = semVal.split('|');
-      document.getElementById('rptDates').textContent = fmt(+p[1]) + ' al ' + fmt(+p[2]);
+      const startTs = p[1], endTs = p[2];
+      document.getElementById('rptDates').textContent = fmt(+startTs) + ' al ' + fmt(+endTs);
 
-      // Fetch con timeout extendido para darle tiempo a Metabase (especialmente la primera carga)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
+      // PROCESO DE CARGA POR BLOQUES (Evita timeouts de Vercel)
+      const cards = [
+        { id: '3588', n: 'Ofrecimientos' },
+        { id: '3584', n: 'Operaciones' },
+        { id: '3507', n: 'Stock (BC)' },
+        { id: '3480', n: 'Actividad' }
+      ];
 
-      fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2] + "&v=" + Date.now(), { signal: controller.signal })
-        .then(res => {
-          clearTimeout(timeoutId);
-          if (!res.ok) return res.text().then(t => { throw new Error(t || "Error " + res.status); });
-          return res.json();
-        })
-        .then(r => {
-          if (r.error) throw new Error(r.error);
-          renderRealData(r);
-          if (r._cached) {
-            console.log("Cargado desde Caché Turbo");
-          }
-        })
-        .catch(e => {
-          clearTimeout(timeoutId);
-          console.error(e);
-          var msg = e.name === 'AbortError' ? "El servidor de Metabase está tardando mucho en responder (Límite 60s). La primera vez es normal, por favor reintente en 5 segundos." : e.message;
-          alert("Aviso: " + msg);
-          renderRealData({});
-        });
+      var results = { base: [], ops: [], act: [], bc: [], vR: [] };
+      var loadedCount = 0;
+
+      function checkDone() {
+        loadedCount++;
+        document.getElementById('ltxt').textContent = "Cargando componentes (" + loadedCount + "/5)...";
+        if (loadedCount === 5) {
+          document.getElementById('rptBadge').innerHTML = '<span class="badge b-g">DATOS SINCRONIZADOS</span>';
+          assembleAndRender(results, ac, startTs, endTs);
+          document.getElementById('globalLoader').classList.remove('on');
+        }
+      }
+
+      document.getElementById('rptBadge').innerHTML = '<span class="badge b-g" style="background:#fef3c7; color:#92400e">Sincronizando Metabase...</span>';
+      document.getElementById('globalLoader').classList.add('on');
+      document.getElementById('ltxt').textContent = "Iniciando descarga segmentada...";
+
+      // Fetch Cards en Paralelo pero cada una con su propio tiempo
+      cards.forEach(c => {
+        fetch("/api/report?op=fetchCard&cardId=" + c.id + "&ac=" + encodeURIComponent(ac))
+          .then(res => res.json())
+          .then(res => {
+            if (c.id === '3588') results.base = res.data;
+            if (c.id === '3584') results.ops = res.data;
+            if (c.id === '3480') results.act = res.data;
+            if (c.id === '3507') results.bc = res.data;
+            checkDone();
+          })
+          .catch(err => { console.error("Error en card " + c.id, err); checkDone(); });
+      });
+
+      // Google Sheets
+      fetch("/api/report?op=fetchSheets")
+        .then(res => res.json())
+        .then(res => { results.vR = res.vR; checkDone(); })
+        .catch(err => { console.error("Error en Sheets", err); checkDone(); });
+    }
+
+    // Procesa todo en el cliente para máxima velocidad (ya que el servidor ya filtró x AC)
+    function assembleAndRender(data, ac, startTs, endTs) {
+      // Re-utilizamos la lógica de procesamiento (simplificada para el cliente)
+      const dIn = new Date(+startTs); dIn.setUTCHours(0, 0, 0, 0);
+      const dFi = new Date(+endTs); dFi.setUTCHours(23, 59, 59, 999);
+      const dInAnt = new Date(startTs - 604800000);
+      const dFiAnt = new Date(endTs - 604800000);
+
+      const fYMD = (d) => d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+      const dI = fYMD(dIn), dF = fYMD(dFi), dIA = fYMD(dInAnt), dFA = fYMD(dFiAnt);
+
+      let cab = 0, trop = 0, dT = [0, 0, 0, 0, 0, 0, 0], cccNum = 0;
+      data.base.forEach(row => {
+        const dObj = new Date(row.fecha_publicaciones || row.fecha);
+        const fs = fYMD(dObj);
+        const c = Number(row.Cabezas || 0);
+        if (fs >= dI && fs <= dF) {
+          cab += c; trop++;
+          if (String(row.ESTADO || "").toUpperCase().includes("CONCRETADA")) cccNum++;
+          const dIdx = dObj.getUTCDay();
+          dT[dIdx === 0 ? 6 : dIdx - 1]++;
+        }
+      });
+
+      let cabV = 0, cabC = 0, trConc = 0, top5 = [];
+      data.ops.forEach(row => {
+        const dObj = new Date(row.fecha_operacion || row.fecha);
+        const fs = fYMD(dObj);
+        if (fs >= dI && fs <= dF) {
+          const q = Number(row.Q || 0);
+          if (String(row.asoc_com_vend || "").toLowerCase().trim() === ac.toLowerCase().trim()) cabV += q;
+          if (String(row.asoc_com_compra || "").toLowerCase().trim() === ac.toLowerCase().trim()) cabC += q;
+          trConc++;
+          const fmtD = dObj.getUTCDate().toString().padStart(2, '0') + '/' + (dObj.getUTCMonth() + 1).toString().padStart(2, '0');
+          top5.push({ q, d: [row.ID, row.UN, row.RS_Vendedora || row.RS_Compradora, "", "", "", fmtD, q, "", "", row.Cat] });
+        }
+      });
+      top5.sort((a, b) => b.q - a.q);
+
+      // Renderizados
+      document.getElementById('valCab').textContent = cab.toLocaleString();
+      document.getElementById('metaCab').textContent = trop + ' Tropas · ' + (trop > 0 ? Math.round(cccNum / trop * 100) + '%' : '0%') + ' CCC';
+      document.getElementById('valConc').textContent = (cabV + cabC).toLocaleString();
+      document.getElementById('metaConc').textContent = trConc + ' Operaciones Registradas';
+
+      // CRM & Otros (Simplificado por ahora)
+      if (data.vR && data.vR.length >= 6) {
+        var com = 0, age = 0;
+        (data.vR[0].values || []).forEach(r => { if (String(r[5]).toLowerCase().trim() === ac.toLowerCase().trim()) com++; });
+        document.getElementById('smSG').textContent = com;
+        document.getElementById('smSac').textContent = (data.vR[4].values || []).filter(r => String(r[18]).toLowerCase().trim() === ac.toLowerCase().trim()).length;
+        document.getElementById('smRem').textContent = (data.vR[5].values || []).filter(r => String(r[2]).toLowerCase().trim() === ac.toLowerCase().trim()).length;
+      }
+
+      renderOpsTable(top5.slice(0, 5));
+      drawChart(dT);
     }
 
     function resetSkeletons() {
@@ -488,23 +567,6 @@
       document.getElementById('smSac').innerHTML = '-';
       document.getElementById('smRem').innerHTML = '-';
       document.getElementById('smNue').innerHTML = '-';
-    }
-
-    function renderRealData(d) {
-      document.getElementById('valCab').textContent = (d.cab || 0).toLocaleString();
-      document.getElementById('metaCab').textContent = (d.trop || 0) + ' Tropas · ' + (d.ccc || '0%') + ' CCC';
-
-      document.getElementById('valConc').textContent = ((d.cabV || 0) + (d.cabC || 0)).toLocaleString();
-      document.getElementById('metaConc').textContent = (d.trConc || 0) + ' Operaciones Registradas';
-
-      document.getElementById('smSG').textContent = d.tSG || 0;
-      document.getElementById('smCarg').textContent = d.carg || 0;
-      document.getElementById('smSac').textContent = (d.sacs || []).length;
-      document.getElementById('smRem').textContent = d.rem || 0;
-      document.getElementById('smNue').textContent = d.nuevas || 0;
-
-      renderOpsTable(d.top5);
-      drawChart(d.dT || [0, 0, 0, 0, 0, 0, 0]);
     }
 
     function renderOpsTable(ops) {
@@ -543,6 +605,11 @@
         ctx.fillText(DIAS[i], 40 + i * bw + bw / 2, H - 10);
         ctx.fillStyle = '#f3f4f6';
       }
+    }
+
+    function fmt(v) {
+      var d = new Date(v);
+      return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0');
     }
 
     function fmt(v) {
