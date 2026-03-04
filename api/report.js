@@ -108,20 +108,54 @@ function processReportFixed(baseRows, opsRows, vR, ac, startTs, endTs) {
     r.socOf = Object.keys(socS).length;
     r.ccc = r.trop > 0 ? Math.round((r.cccNum / r.trop) * 100) + "%" : "0%";
 
-    // OPS (3584) - Asumimos campos estándar por ahora o similares
+    // OPS (3584) - Mapping from User SQL
     const socOps = {}, allOps = [];
     for (const row of opsRows) {
-        const f = row.fecha || row['Fecha'];
+        // Nombres de columna según el SQL de OPS (3584)
+        const f = row.fecha_operacion || row.fecha;
         const fs = f ? new Date(f).toISOString().split('T')[0].replace(/-/g, '') : "";
         if (!fs) continue;
-        const aV = String(row.acv || row['ACV'] || "").trim(), aC = String(row.acc || row['ACC'] || "").trim(), q = Number(row.q || row['Q'] || 0);
+
+        const aV = String(row.asoc_com_vend || row.acv || "").trim();
+        const aC = String(row.asoc_com_compra || row.acc || "").trim();
+        const q = Number(row.Q || row.q || 0);
+
         if (aV === ac || aC === ac) {
             if (fs >= dInicio && fs <= dFin) {
-                if (aV === ac) { r.cabV += q; if (row.socv) socOps[row.socv] = 1; }
-                if (aC === ac) { r.cabC += q; if (row.socc) socOps[row.socc] = 1; }
+                if (aV === ac) {
+                    r.cabV += q;
+                    const sV = row.RS_Vendedora || row.socv;
+                    if (sV) socOps[sV] = 1;
+                }
+                if (aC === ac) {
+                    r.cabC += q;
+                    const sC = row.RS_Compradora || row.socc;
+                    if (sC) socOps[sC] = 1;
+                }
                 r.trConc++;
-                const fmtDate = (v) => { let d = new Date(v); return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0'); };
-                allOps.push({ q, d: [row.id || "-", row.un || "-", row.socv || "-", aV, row.socc || "-", aC, fmtDate(f), q, "", "", row.cat || "-"] });
+
+                const fmtDate = (v) => {
+                    let d = new Date(v);
+                    return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0');
+                };
+
+                // ID, UN, RS_Vend, AC_Vend, RS_Comp, AC_Comp, Fecha, Q ... Cat
+                allOps.push({
+                    q,
+                    d: [
+                        row.ID || row.id || "-",
+                        row.UN || row.un || "-",
+                        row.RS_Vendedora || row.socv || "-",
+                        aV,
+                        row.RS_Compradora || row.socc || "-",
+                        aC,
+                        fmtDate(f),
+                        q,
+                        "",
+                        "",
+                        row.Cat || row.cat || "-"
+                    ]
+                });
             }
             if (fs >= dInicioAnt && fs <= dFinAnt) r.pConc += q;
         }
