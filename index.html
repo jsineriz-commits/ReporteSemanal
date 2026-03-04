@@ -332,10 +332,15 @@
       fetch("/api/report?op=config&cb=" + Date.now())
         .then(function (res) {
           if (!res.ok) {
-            return res.json().then(function (errObj) {
-              throw new Error(errObj.error || "HTTP " + res.status);
-            }).catch(function () {
-              throw new Error("HTTP " + res.status);
+            return res.text().then(function (txt) {
+              try {
+                var err = JSON.parse(txt);
+                throw new Error(err.error || txt);
+              } catch (ex) {
+                // Si no es JSON, mostramos el texto/HTML (limpio)
+                var clean = txt.replace(/<[^>]*>?/gm, ' ').slice(0, 300);
+                throw new Error("Servidor falló con: " + clean);
+              }
             });
           }
           return res.json();
@@ -343,7 +348,7 @@
         .then(function (data) { onCfg(data); })
         .catch(function (e) {
           slo(false);
-          eid('empty').innerHTML = '<div class="err-box"><b>Error de Conexión:</b> ' + e.message + '</div>';
+          eid('empty').innerHTML = '<div class="err-box"><b>DETALLE DEL ERROR:</b><br>' + e.message + '</div>';
         });
     });
 
