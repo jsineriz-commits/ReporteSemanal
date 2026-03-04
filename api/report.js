@@ -1,6 +1,6 @@
 /**
- * Vercel Serverless API - Reporte Semanal 9.0 (Parallel Chunked Loading)
- * Optimizado para velocidad: Carga individual por Card y filtrado en el servidor.
+ * Vercel Serverless API - Reporte Semanal 10.0 (Global Turbo Cache + Fuzzy Match)
+ * Caching global sin filtros y emparejamiento inteligente de ACs.
  */
 const { google } = require('googleapis');
 
@@ -9,25 +9,31 @@ const METABASE_USER = process.env.METABASE_USER || "";
 const METABASE_PASS = process.env.METABASE_PASS || "";
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID || "";
 
-// Cache mínima para la sesión (evita re-login constante)
-let cachedSession = { id: null, expiry: 0 };
+// --- CACHÉ GLOBAL EN MEMORIA (Persiste entre lambdas calientes) ---
+let globalMemory = {
+    session: { id: null, expiry: 0 },
+    cards: {}, // Guarda el JSON completo de cada card
+    lastFetch: {}, // Timestamp por card
+};
+
+const CARD_TTL = 15 * 60 * 1000; // 15 minutos de caché total
 
 module.exports = async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     if (req.method === "OPTIONS") return res.status(200).end();
 
-    const { op, ac, startTs, endTs, cardId } = req.query;
+    const { op, ac, cardId } = req.query;
 
     try {
         const api = getSheetsApi();
 
-        // 1. Configuración inicial
         if (op === "config") {
             const response = await api.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Comentarios_CRM!F2:F' });
             const rows = response.data.values || [];
             const acSet = new Set();
             for (let i = 0; i < rows.length; i++) if (rows[i][0]) acSet.add(rows[i][0].trim());
+
             const semanas = [];
             const startOf2026 = new Date("2026-01-01T00:00:00Z").getTime();
             for (let i = 1; i <= 52; i++) {
@@ -38,18 +44,39 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ acs: Array.from(acSet).sort(), semanas });
         }
 
-        // 2. Fetch de una sola Card (Optimizado)
         if (op === "fetchCard") {
-            if (!ac || !cardId) throw new Error("Faltan parámetros");
-            const sessId = await getMetabaseSession();
-            const rawData = await queryCard(sessId, cardId);
+            if (!ac || !cardId) throw new Error("Parámetros insuficientes");
 
-            // Filtramos en el servidor para enviar menos datos al navegador
-            const filtered = filterDataByAC(rawData, cardId, ac);
-            return res.status(200).json({ data: filtered, cardId });
+            const now = Date.now();
+            let rows = [];
+
+            // 1. Revisar si la card está en memoria y es reciente
+            if (globalMemory.cards[cardId] && (now - globalMemory.lastFetch[cardId] < CARD_TTL)) {
+                console.log(`Serving Card ${cardId} from Global Cache`);
+                rows = globalMemory.cards[cardId];
+            } else {
+                console.log(`Fetching Card ${cardId} from Metabase (Cache Expired/Empty)`);
+                const sessId = await getMetabaseSession();
+                rows = await queryCard(sessId, cardId);
+
+                // Guardar en memoria global
+                globalMemory.cards[cardId] = rows;
+                globalMemory.lastFetch[cardId] = now;
+            }
+
+            // 2. Filtrar usando Fuzzy Match (Email vs Nombre)
+            const filtered = filterDataFuzzy(rows, cardId, ac);
+
+            return res.status(200).json({
+                data: filtered,
+                cardId,
+                _cache: true,
+                _age: Math.round((now - globalMemory.lastFetch[cardId]) / 1000) + "s",
+                _totalRows: rows.length,
+                _matchRows: filtered.length
+            });
         }
 
-        // 3. Fetch de Google Sheets
         if (op === "fetchSheets") {
             const data = await api.spreadsheets.values.batchGet({
                 spreadsheetId: SPREADSHEET_ID,
@@ -59,41 +86,53 @@ module.exports = async function handler(req, res) {
         }
 
     } catch (e) {
+        console.error("API Error:", e);
         return res.status(500).json({ error: e.message });
     }
 };
 
 /**
- * Filtra los datos masivos de Metabase para un solo AC antes de enviarlos.
- * Esto reduce el tamaño de la respuesta de megabytes a kilobytes.
+ * Filtro inteligente que entiende que 'aacuna@decampoacampo.com' puede ser 'Alejandro Acuña'
  */
-function filterDataByAC(rows, cardId, ac) {
+function filterDataFuzzy(rows, cardId, acEmail) {
     if (!Array.isArray(rows)) return [];
-    const target = ac.toLowerCase().trim();
+    const targetEmail = acEmail.toLowerCase().trim();
+    const targetAlias = targetEmail.split('@')[0]; // 'aacuna'
 
     return rows.filter(row => {
-        // Mapeo de columnas según cada card
-        if (cardId === "3588") { // BASE
-            const acRow = String(row.AC_Vend || row.ac_vend || row.ac || "").trim().toLowerCase();
-            return acRow === target;
-        }
-        if (cardId === "3584") { // OPS
-            const aV = String(row.asoc_com_vend || "").trim().toLowerCase();
-            const aC = String(row.asoc_com_compra || "").trim().toLowerCase();
-            return aV === target || aC === target;
-        }
-        if (cardId === "3480") { // ULT_ACT
-            const acRow = String(row.AC || row.ac || "").trim().toLowerCase();
-            return acRow === target;
-        }
-        if (cardId === "3507") { // BCFULL (Esta suele ser por CUIT, dejamos todo por ahora o filtramos por AC si existe)
-            return true;
-        }
-        return true;
+        let nameInRow = "";
+        if (cardId === "3588") nameInRow = row.AC_Vend || row.ac_vend || row.ac || "";
+        else if (cardId === "3584") return fuzzyMatch(row.asoc_com_vend, targetEmail) || fuzzyMatch(row.asoc_com_compra, targetEmail);
+        else if (cardId === "3480") nameInRow = row.AC || row.ac || "";
+        else if (cardId === "3507") return true; // Stock suele ser general o por CUIT
+
+        return fuzzyMatch(nameInRow, targetEmail);
     });
 }
 
-// Helpers
+function fuzzyMatch(name, email) {
+    if (!name || !email) return false;
+    const n = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const e = email.toLowerCase().trim();
+
+    // 1. Match Directo
+    if (n === e) return true;
+
+    // 2. Match de Prefijo (aacuna@... -> aacuna)
+    const alias = e.split('@')[0];
+    if (n.includes(alias) || alias.includes(n)) return true;
+
+    // 3. Match de Apellido (Si el alias contiene el apellido)
+    // Ejemplo: 'acuna' está en 'Alejandro Acuña'
+    const nameParts = n.split(/\s+/);
+    for (let p of nameParts) {
+        if (p.length > 3 && alias.includes(p)) return true;
+    }
+
+    return false;
+}
+
+// Helpers unchanged
 function getSheetsApi() {
     let e = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
     let k = process.env.GOOGLE_PRIVATE_KEY || "";
@@ -104,17 +143,14 @@ function getSheetsApi() {
 }
 
 async function getMetabaseSession() {
-    if (cachedSession.id && Date.now() < cachedSession.expiry) return cachedSession.id;
+    if (globalMemory.session.id && Date.now() < globalMemory.session.expiry) return globalMemory.session.id;
     const res = await fetch(`${METABASE_URL}/api/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: METABASE_USER, password: METABASE_PASS }) });
     const d = await res.json();
-    cachedSession = { id: d.id, expiry: Date.now() + 3600000 };
+    globalMemory.session = { id: d.id, expiry: Date.now() + 3600000 };
     return d.id;
 }
 
 async function queryCard(sessionId, cardId) {
-    const res = await fetch(`${METABASE_URL}/api/card/${cardId}/query/json`, {
-        method: "POST",
-        headers: { "X-Metabase-Session": sessionId, "Content-Type": "application/json" }
-    });
+    const res = await fetch(`${METABASE_URL}/api/card/${cardId}/query/json`, { method: "POST", headers: { "X-Metabase-Session": sessionId, "Content-Type": "application/json" } });
     return res.ok ? res.json() : [];
 }
