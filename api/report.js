@@ -49,9 +49,11 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: "Especifique op=config para empezar", debug: dns });
 
     } catch (e) {
+        const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
         return res.status(500).json({
             error: "Error en Servidor: " + e.message,
-            ayuda: "Este error suele ser por la GOOGLE_PRIVATE_KEY mal pegada en Vercel."
+            email_debug: email ? (email.slice(0, 4) + "..." + email.slice(-10)) : "Vacío",
+            ayuda: "Verificá que el email coincida con el client_email de tu JSON de Google."
         });
     }
 };
