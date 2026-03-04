@@ -49,15 +49,20 @@ module.exports = async function handler(req, res) {
         }
 
         if (op === "config") {
-            // Intentar leer de Config 2.0 primero (como el original), fallback a Comentarios_CRM
-            let acList = [];
+            // Leer ACs desde Config 2.0 (columna A tiene los nombres reales)
+            // Los nombres de Config 2.0 coinciden con las columnas AC_Vend en BASE y asoc_com_vend en OPS
             const meta = await api.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
             const sheetNames = meta.data.sheets.map(s => s.properties.title);
 
+            let acList = [];
+
+            // Config 2.0 tiene los nombres reales (como el original Codigo.js)
             if (sheetNames.includes('Config 2.0')) {
                 const d = await api.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: "'Config 2.0'!A2:A" });
-                acList = (d.data.values || []).map(r => r[0]).filter(Boolean);
+                acList = (d.data.values || []).map(r => (r[0] || "").trim()).filter(Boolean);
             }
+
+            // Fallback: Si no hay Config 2.0, usar Comentarios_CRM col F
             if (acList.length === 0 && sheetNames.includes('Comentarios_CRM')) {
                 const d = await api.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: 'Comentarios_CRM!F2:F' });
                 const set = new Set();
@@ -65,13 +70,36 @@ module.exports = async function handler(req, res) {
                 acList = Array.from(set);
             }
 
-            const semanas = [];
-            const s2026 = new Date("2026-01-01T00:00:00Z").getTime();
-            for (let i = 1; i <= 52; i++) {
-                const s = s2026 + (i - 1) * 604800000;
-                semanas.push({ n: i, s, e: s + 518400000, y: 2026 });
+            // Semanas
+            let semanas = [];
+            // Intentar leer de pestaña "aux" como el original
+            if (sheetNames.includes('aux')) {
+                try {
+                    const auxData = await api.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: "'aux'!J2:M" });
+                    const auxRows = auxData.data.values || [];
+                    for (const row of auxRows) {
+                        if (row[0] && row[1] && row[2]) {
+                            semanas.push({
+                                n: Number(row[0]),
+                                s: new Date(row[1]).getTime(),
+                                e: new Date(row[2]).getTime(),
+                                y: Number(row[3]) || 2026
+                            });
+                        }
+                    }
+                } catch (e) { }
             }
-            return res.status(200).json({ acs: acList.sort(), semanas, _source: sheetNames.includes('Config 2.0') ? 'Config 2.0' : 'Comentarios_CRM' });
+
+            // Fallback: generar semanas fijas
+            if (semanas.length === 0) {
+                const s2026 = new Date("2026-01-01T00:00:00Z").getTime();
+                for (let i = 1; i <= 52; i++) {
+                    const s = s2026 + (i - 1) * 604800000;
+                    semanas.push({ n: i, s, e: s + 518400000, y: 2026 });
+                }
+            }
+
+            return res.status(200).json({ acs: acList.sort(), semanas, _source: 'Config 2.0' });
         }
 
         if (op === "report") {
@@ -153,13 +181,26 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
 
     const toYMD = (val) => {
         if (!val) return "";
-        const d = new Date(val);
+        let d;
+        // Si ya es un número (serial date de Excel/Sheets)
+        if (!isNaN(val) && typeof val === 'number') {
+            d = new Date((val - 25569) * 86400 * 1000);
+        } else {
+            // Si es un string tipo "25/2/2026"
+            const parts = String(val).split('/');
+            if (parts.length === 3) {
+                // Asumimos D/M/YYYY (formato Latam/España común en Sheets)
+                d = new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
+            } else {
+                d = new Date(val);
+            }
+        }
         if (isNaN(d.getTime())) return "";
         return d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, "0") + String(d.getUTCDate()).padStart(2, "0");
     };
 
-    const dInicio = toYMD(dIn), dFin = toYMD(dFi);
-    const dInicioAnt = toYMD(dInAnt), dFinAnt = toYMD(dFiAnt);
+    const dInicio = toYMD(startTs), dFin = toYMD(endTs);
+    const dInicioAnt = toYMD(startTs - 604800000), dFinAnt = toYMD(endTs - 604800000);
 
     const r = {
         cab: 0, trop: 0, dT: [0, 0, 0, 0, 0, 0, 0], pCab: 0, pTrop: 0, cccNum: 0,
@@ -170,10 +211,18 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
         carg: 0, cargProp: 0, cargAjen: 0
     };
 
+    const parseDateIdx = (val) => {
+        if (!val) return null;
+        const parts = String(val).split('/');
+        if (parts.length === 3) return new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+    };
+
     // 1. BASE
     const socS = {};
     for (const row of dBase) {
-        if (String(row[5] || "").trim() !== ac) continue;
+        if (String(row[5] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
         const fStr = toYMD(row[1]);
         if (!fStr) continue;
         const est = String(row[3] || "").trim().toUpperCase();
@@ -185,13 +234,16 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
         else if (est === "PUBLICADO") { ok = true; esCCC = true; }
         else if (est === "NO CONCRETADAS" && mot !== "No la comercializo" && gF === 1) { ok = true; }
         if (!ok) continue;
+
         if (fStr >= dInicio && fStr <= dFin) {
             r.cab += cab; r.trop++;
             if (esCCC) r.cccNum++;
             if (row[2]) socS[row[2]] = 1;
-            const d = new Date(row[1]);
-            const dIdx = d.getUTCDay() === 0 ? 6 : d.getUTCDay() - 1;
-            r.dT[dIdx]++;
+            const d = parseDateIdx(row[1]);
+            if (d) {
+                const dIdx = d.getUTCDay() === 0 ? 6 : d.getUTCDay() - 1;
+                r.dT[dIdx]++;
+            }
         }
         if (fStr >= dInicioAnt && fStr <= dFinAnt) { r.pCab += cab; r.pTrop++; }
     }
@@ -206,22 +258,25 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
         const aV = String(row[6] || "").trim();
         const aC = String(row[8] || "").trim();
         const q = Number(row[9]) || 0;
-        if (aV === ac || aC === ac) {
+        const meV = aV.toLowerCase() === ac.toLowerCase();
+        const meC = aC.toLowerCase() === ac.toLowerCase();
+
+        if (meV || meC) {
             if (fStr >= dInicio && fStr <= dFin) {
-                if (aV === ac) { r.cabV += q; if (row[5]) socOps[row[5]] = 1; }
-                if (aC === ac) { r.cabC += q; if (row[7]) socOps[row[7]] = 1; }
+                if (meV) { r.cabV += q; if (row[5]) socOps[row[5]] = 1; }
+                if (meC) { r.cabC += q; if (row[7]) socOps[row[7]] = 1; }
                 r.trConc++;
-                const fD = new Date(row[2]);
-                const fmtD = fD.getUTCDate().toString().padStart(2, '0') + '/' + (fD.getUTCMonth() + 1).toString().padStart(2, '0');
+                const d = parseDateIdx(row[2]);
+                const fmtD = d ? (d.getUTCDate().toString().padStart(2, '0') + '/' + (d.getUTCMonth() + 1).toString().padStart(2, '0')) : "...";
                 allOps.push({ q, d: [row[0] || "", row[1] || "", row[5] || "", aV, row[7] || "", aC, fmtD, q, row[22] || "", row[20] || "", row[10] || ""] });
             }
             if (fStr >= dInicioAnt && fStr <= dFinAnt) r.pConc += q;
         }
         const fCarStr = toYMD(row[18]);
-        if (fCarStr && String(row[22] || "").trim() === ac) {
+        if (fCarStr && String(row[22] || "").trim().toLowerCase() === ac.toLowerCase()) {
             if (fCarStr >= dInicio && fCarStr <= dFin) {
                 r.carg++;
-                if (aV === ac) r.cargProp++; else r.cargAjen++;
+                if (meV) r.cargProp++; else r.cargAjen++;
             }
         }
     }
@@ -232,7 +287,7 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
     // 3. CRM
     const socGest = {}, pSocGest = {};
     for (const row of dCom) {
-        if (String(row[5] || "").trim() !== ac) continue;
+        if (String(row[5] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
         const fStr = toYMD(row[3]);
         if (!fStr) continue;
         if (fStr >= dInicio && fStr <= dFin) {
@@ -242,7 +297,7 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
         if (fStr >= dInicioAnt && fStr <= dFinAnt) { if (row[0]) pSocGest[row[0]] = 1; }
     }
     for (const row of dAge) {
-        if (String(row[3] || "").trim() !== ac) continue;
+        if (String(row[3] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
         const fStr = toYMD(row[4]);
         if (!fStr) continue;
         if (fStr >= dInicio && fStr <= dFin) { r.age++; if (row[1]) socGest[row[1]] = 1; }
@@ -253,7 +308,7 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
 
     // 4. Leads
     for (const row of dLeads) {
-        if (String(row[2] || "").trim() !== ac) continue;
+        if (String(row[2] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
         if (String(row[3] || "").trim() !== "UA" || String(row[11] || "").trim() === "NO HABILITADO") continue;
         const fStr = toYMD(row[1]);
         if (!fStr) continue;
@@ -264,11 +319,15 @@ function processReport(ac, startTs, endTs, dBase, dOps, dCom, dAge, dLeads, dAux
     // 5. Aux
     const ssgAll = [];
     for (const row of dAux) {
-        if (String(row[1] || "").trim() !== ac) continue;
+        if (String(row[1] || "").trim().toLowerCase() !== ac.toLowerCase()) continue;
         const isNuevo = String(row[4] || "").trim().toUpperCase() === "NUEVO";
         if (isNuevo) r.socSinGestNum++;
         const cDateStr = toYMD(row[2]);
-        const obj = { soc: row[29] || "", w: Number(row[22]) || 0, cDateStr };
+        const d = parseDateIdx(row[2]);
+        const obj = {
+            soc: row[29] || "", w: Number(row[22]) || 0, cDateStr,
+            fa: d ? (d.getUTCDate().toString().padStart(2, '0') + '/' + (d.getUTCMonth() + 1).toString().padStart(2, '0')) : ""
+        };
         if (isNuevo) ssgAll.push(obj);
         if (cDateStr >= dInicio && cDateStr <= dFin) {
             const ag = Number(row[32]) || 0;
