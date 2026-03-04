@@ -445,7 +445,6 @@
       var semVal = document.getElementById('selSem').value;
       if (!ac || !semVal) return;
 
-      // 1. Mostrar "Skeleton" inmediatamente
       document.getElementById('initialState').style.display = 'none';
       document.getElementById('rptFrame').style.display = 'block';
       document.getElementById('rptTitle').textContent = ac + ' — Cargando Informe';
@@ -454,14 +453,27 @@
       var p = semVal.split('|');
       document.getElementById('rptDates').textContent = fmt(+p[1]) + ' al ' + fmt(+p[2]);
 
-      // 2. Fetch real
-      fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2] + "&v=" + Date.now())
-        .then(res => res.json())
+      // Fetch con timeout de 25 seg para evitar que quede colgado
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+      fetch("/api/report?op=report&ac=" + encodeURIComponent(ac) + "&startTs=" + p[1] + "&endTs=" + p[2] + "&v=" + Date.now(), { signal: controller.signal })
+        .then(res => {
+          clearTimeout(timeoutId);
+          if (!res.ok) return res.text().then(t => { throw new Error(t || "Error " + res.status); });
+          return res.json();
+        })
         .then(r => {
           if (r.error) throw new Error(r.error);
           renderRealData(r);
         })
-        .catch(e => { alert("Error de datos: " + (e.message || e)); });
+        .catch(e => {
+          clearTimeout(timeoutId);
+          console.error(e);
+          var msg = e.name === 'AbortError' ? "Tiempo de espera agotado (Vercel tardó demasiado). Reintente." : e.message;
+          alert("Aviso: " + msg);
+          renderRealData({}); // Mostrar ceros si falla
+        });
     }
 
     function resetSkeletons() {
