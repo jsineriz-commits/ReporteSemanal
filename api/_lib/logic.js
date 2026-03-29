@@ -3,6 +3,7 @@
 // Mantiene la lógica idéntica al original.
 
 const { getSheetData, g } = require('./sheets');
+const { fetchMetabaseQuery } = require('./metabase');
 const cache = require('./cache');
 const props = require('./props');
 
@@ -134,8 +135,8 @@ async function loadData() {
     baseRaw, opsRaw, comsRaw, agendasRaw,
     leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, bcfullRaw,
   ] = await Promise.all([
-    getSheetData('BASE'),
-    getSheetData('OPS'),
+    fetchMetabaseQuery(101).catch(e => { console.error('Metabase BASE fail:', e.message); return { rows: [], headers: [] }; }),
+    fetchMetabaseQuery(102).catch(e => { console.error('Metabase OPS fail:', e.message); return { rows: [], headers: [] }; }),
     getSheetData('Comentarios_CRM'),
     getSheetData('Agenda_CRM'),
     getSheetData('Leads_CRM'),
@@ -147,15 +148,32 @@ async function loadData() {
 
   // ── BASE ──
   const base = [];
-  baseRaw.slice(1).forEach(row => {
-    const ac      = norm(g(row, 5));
-    const repVend = norm(g(row, 20));
-    const repComp = norm(g(row, 21));
+  const bMap = {};
+  if (baseRaw && baseRaw.headers) {
+    baseRaw.headers.forEach((h, i) => bMap[h] = i);
+  }
+  const idxB = {
+    ac: bMap['ac_vend'] ?? 5,
+    f: bMap['fecha_publicaciones'] ?? 1,
+    soc: bMap['sociedad_vendedora'] ?? 2,
+    cab: bMap['cabezas'] ?? 4,
+    est: bMap['estado'] ?? 3,
+    cot: bMap['cotizada'] ?? 6,
+    id: bMap['id_lote'] ?? 0,
+    cuit: bMap['cuit_vend'] ?? 16,
+    un: bMap['un'] ?? 7,
+    repVend: bMap['repre_vendedor'] ?? 20,
+    repComp: bMap['repre_comprador'] ?? 21,
+  };
+  (baseRaw.rows || []).forEach(row => {
+    const ac      = norm(g(row, idxB.ac));
+    const repVend = norm(g(row, idxB.repVend));
+    const repComp = norm(g(row, idxB.repComp));
     if (!ac && !repVend && !repComp) return;
-    const f = toDateStr(g(row, 1)); if (!f) return;
-    const est = String(g(row, 3) || '').trim().toUpperCase();
+    const f = toDateStr(g(row, idxB.f)); if (!f) return;
+    const est = String(g(row, idxB.est) || '').trim().toUpperCase();
     let conc = false, pub = false, ofr = false, noConc = false;
-    const cotizo = Number(g(row, 6)) === 1 ? 1 : 0;
+    const cotizo = Number(g(row, idxB.cot)) === 1 ? 1 : 0;
     if      (est === 'CONCRETADA')                            { conc  = true; }
     else if (est === 'PUBLICADO')                             { pub   = true; }
     else if (est === 'OFRECIMIENTOS')                         { ofr   = true; }
@@ -164,18 +182,18 @@ async function loadData() {
     base.push([
       ac,                           // 0 ac
       f,                            // 1 f
-      toDayIdx(g(row, 1)),          // 2 di
-      g(row, 2) || '',              // 3 soc
-      Number(g(row, 4)) || 0,       // 4 cab
+      toDayIdx(g(row, idxB.f)),     // 2 di
+      g(row, idxB.soc) || '',       // 3 soc
+      Number(g(row, idxB.cab)) || 0,// 4 cab
       conc ? 1 : 0,                 // 5 conc
       pub  ? 1 : 0,                 // 6 pub
       ofr  ? 1 : 0,                 // 7 ofr
       noConc ? 1 : 0,               // 8 noConc
       cotizo,                       // 9 cotizo
-      String(g(row, 0) || ''),      // 10 id (col A)
-      String(g(row, 16) || ''),     // 11 CUIT (col Q)
-      String(g(row, 7) || ''),      // 12 UN (col H)
-      toFmt(g(row, 1)),             // 13 fmtFecha
+      String(g(row, idxB.id) || ''),// 10 id (col A)
+      String(g(row, idxB.cuit) || ''),// 11 CUIT (col Q)
+      String(g(row, idxB.un) || ''),// 12 UN (col H)
+      toFmt(g(row, idxB.f)),        // 13 fmtFecha
       repVend,                      // 14 rep vend (col U)
       repComp,                      // 15 rep comp (col V)
     ]);
@@ -183,31 +201,53 @@ async function loadData() {
 
   // ── OPS ──
   const ops = [];
-  opsRaw.slice(1).forEach(row => {
-    const aV = norm(g(row, 6)), aC = norm(g(row, 8));
-    const rV = norm(g(row, 34)), rC = norm(g(row, 35));
+  const oMap = {};
+  if (opsRaw && opsRaw.headers) {
+    opsRaw.headers.forEach((h, i) => oMap[h] = i);
+  }
+  const idxO = {
+    aV: oMap['asoc_com_vend'] ?? 6,
+    aC: oMap['asoc_com_compra'] ?? 8,
+    rV: oMap['repre_vendedor'] ?? 34,
+    rC: oMap['repre_comprador'] ?? 35,
+    f: oMap['fecha_operacion'] ?? 2,
+    cargAc: oMap['op_carga'] ?? 22,
+    cargF: oMap['fecha_carga'] ?? 18,
+    qTot: oMap['q'] ?? 9,
+    socV: oMap['rs_vendedora'] ?? 5,
+    socC: oMap['rs_compradora'] ?? 7,
+    id: oMap['id'] ?? 0,
+    un: oMap['un'] ?? 1,
+    cat: oMap['cat'] ?? 10,
+    cuitV: oMap['cuit_vend'] ?? 20,
+    cuitC: oMap['cuit_comp'] ?? 21,
+    qPart: oMap['q_particular'] ?? 16
+  };
+  (opsRaw.rows || []).forEach(row => {
+    const aV = norm(g(row, idxO.aV)), aC = norm(g(row, idxO.aC));
+    const rV = norm(g(row, idxO.rV)), rC = norm(g(row, idxO.rC));
     if (!aV && !aC && !rV && !rC) return;
-    const f = toDateStr(g(row, 2)); if (!f) return;
-    const cargAcRaw = String(g(row, 22) || '').trim();
-    const cargF     = g(row, 18) ? toDateStr(g(row, 18)) : '';
+    const f = toDateStr(g(row, idxO.f)); if (!f) return;
+    const cargAcRaw = String(g(row, idxO.cargAc) || '').trim();
+    const cargF     = g(row, idxO.cargF) ? toDateStr(g(row, idxO.cargF)) : '';
     ops.push([
-      aV, aC, f, toDayIdx(g(row, 2)),
-      Number(g(row, 9))  || 0,    // 4 Q total (col J)
-      g(row, 5) || '',             // 5 socV (col F)
-      g(row, 7) || '',             // 6 socC (col H)
-      toFmt(g(row, 2)),            // 7 fmtFecha
-      String(g(row, 0) || ''),     // 8 ID (col A)
-      String(g(row, 1) || ''),     // 9 UN (col B)
-      String(g(row, 10) || ''),    // 10 Cat (col K)
-      norm(cargAcRaw),             // 11 ac carga normalizado
-      cargF,                       // 12 fecha carga (col S)
-      cargF ? toDayIdx(g(row, 18)) : -1, // 13 di carga
-      String(g(row, 21) || ''),    // 14 cuitV (col V)
-      String(g(row, 22) || ''),    // 15 cuitC (col W)
-      cargAcRaw.toLowerCase(),     // 16 ac carga lowercase
-      Number(g(row, 16)) || 0,     // 17 Q particular (col Q)
-      rV,                          // 18 repV (col AI)
-      rC,                          // 19 repC (col AJ)
+      aV, aC, f, toDayIdx(g(row, idxO.f)),
+      Number(g(row, idxO.qTot))  || 0,    // 4 Q total
+      g(row, idxO.socV) || '',             // 5 socV
+      g(row, idxO.socC) || '',             // 6 socC
+      toFmt(g(row, idxO.f)),               // 7 fmtFecha
+      String(g(row, idxO.id) || ''),       // 8 ID
+      String(g(row, idxO.un) || ''),       // 9 UN
+      String(g(row, idxO.cat) || ''),      // 10 Cat
+      norm(cargAcRaw),                     // 11 ac carga normalizado
+      cargF,                               // 12 fecha carga
+      cargF ? toDayIdx(g(row, idxO.cargF)) : -1, // 13 di carga
+      String(g(row, idxO.cuitV) || ''),    // 14 cuitV
+      String(g(row, idxO.cuitC) || ''),    // 15 cuitC
+      cargAcRaw.toLowerCase(),             // 16 ac carga lowercase
+      Number(g(row, idxO.qPart)) || 0,     // 17 Q particular
+      rV,                                  // 18 repV
+      rC,                                  // 19 repC
     ]);
   });
 
