@@ -5,13 +5,13 @@
   "crons": [
     {
       "path": "/api/warmUp",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ],
   "functions": {
     "api/getReport.js":             { "maxDuration": 60 },
-    "api/warmUp.js":                { "maxDuration": 120 },
-    "api/refreshCacheAndWarmup.js": { "maxDuration": 120 },
+    "api/warmUp.js":                { "maxDuration": 60 },
+    "api/refreshCacheAndWarmup.js": { "maxDuration": 60 },
     "api/sendEmailWithPDF.js":      { "maxDuration": 60 }
   }
 }
