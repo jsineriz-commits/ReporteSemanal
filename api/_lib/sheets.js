@@ -5,14 +5,26 @@
 
 const { google } = require('googleapis');
 
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '';
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID || '';
 
 let _authClient = null;
 
 async function getAuthClient() {
   if (_authClient) return _authClient;
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '{}';
-  const credentials = JSON.parse(raw);
+  let credentials;
+  const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  if (rawKey && rawKey.trim().startsWith('{')) {
+    credentials = JSON.parse(rawKey);
+  } else {
+    const emailVar = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
+    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').trim().replace(/\\n/g, '\n').replace(/"/g, '');
+    if (emailVar && privateKey) {
+      credentials = { client_email: emailVar.trim(), private_key: privateKey };
+    } else {
+      credentials = {};
+    }
+  }
+
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: [
