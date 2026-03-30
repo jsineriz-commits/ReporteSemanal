@@ -439,6 +439,11 @@ async function getReport(ac, startTs, endTs, opts) {
   const acMail = cfg.acMap[ac];
   if (!acMail) return { error: 'AC no encontrado: ' + ac };
 
+  const mailAliases = {
+    'emiliano.sanchez@decampoacampo.com': ['esanchez@decampoacampo.com']
+  };
+  const isTargetMail = (m) => m === acMail || !!(mailAliases[acMail] && mailAliases[acMail].includes(m));
+
   const acN = norm(ac);
   const ver  = getReportCacheVersion();
   const rMode = skipPrevLookup ? '_raw' : '';
@@ -751,7 +756,7 @@ async function getReport(ac, startTs, endTs, opts) {
 
   for (let i = 0; i < D.coms.length; i++) {
     const row = D.coms[i];
-    if (row[0] !== acMail) continue;
+    if (!isTargetMail(row[0])) continue;
     const f    = row[1];
     const gKey = getLeadKey(row[7], row[3], 'com:' + i);
     if (inS(f)) {
@@ -767,7 +772,7 @@ async function getReport(ac, startTs, endTs, opts) {
   }
   for (let i = 0; i < D.agendas.length; i++) {
     const row = D.agendas[i];
-    if (row[0] !== acMail) continue;
+    if (!isTargetMail(row[0])) continue;
     const f    = row[1];
     const gKey = getLeadKey(row[6], row[3], 'age:' + i);
     if (inS(f)) {
@@ -810,7 +815,7 @@ async function getReport(ac, startTs, endTs, opts) {
 
   for (let i = 0; i < D.auxLeads.length; i++) {
     const row = D.auxLeads[i];
-    if (row[0] !== acMail) continue;
+    if (!isTargetMail(row[0])) continue;
 
     const socKey = getLeadKey(row[16], row[6], 'aux:' + i);
 
