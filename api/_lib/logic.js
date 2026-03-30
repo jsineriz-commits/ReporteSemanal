@@ -135,8 +135,8 @@ async function loadData() {
     baseRaw, opsRaw, comsRaw, agendasRaw,
     leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, bcfullRaw,
   ] = await Promise.all([
-    fetchMetabaseQuery(101).catch(e => { console.error('Metabase BASE fail:', e.message); return { rows: [], headers: [] }; }),
-    fetchMetabaseQuery(102).catch(e => { console.error('Metabase OPS fail:', e.message); return { rows: [], headers: [] }; }),
+    getSheetData('BASE'),
+    getSheetData('OPS'),
     getSheetData('Comentarios_CRM'),
     getSheetData('Agenda_CRM'),
     getSheetData('Leads_CRM'),
@@ -149,23 +149,23 @@ async function loadData() {
   // ── BASE ──
   const base = [];
   const bMap = {};
-  if (baseRaw && baseRaw.headers) {
-    baseRaw.headers.forEach((h, i) => bMap[h] = i);
+  if (baseRaw && baseRaw[0]) {
+    baseRaw[0].forEach((h, i) => { if (h) bMap[String(h).trim().toLowerCase()] = i; });
   }
   const idxB = {
-    ac: bMap['ac_vend'] ?? 5,
-    f: bMap['fecha_publicaciones'] ?? 1,
-    soc: bMap['sociedad_vendedora'] ?? 2,
+    ac: bMap['ac_vend'] ?? bMap['ac vendedor'] ?? 5,
+    f: bMap['fecha_publicaciones'] ?? bMap['fecha publicaciones'] ?? bMap['fecha'] ?? 1,
+    soc: bMap['sociedad_vendedora'] ?? bMap['sociedad vendedora'] ?? bMap['soc'] ?? 2,
     cab: bMap['cabezas'] ?? 4,
     est: bMap['estado'] ?? 3,
     cot: bMap['cotizada'] ?? 6,
-    id: bMap['id_lote'] ?? 0,
-    cuit: bMap['cuit_vend'] ?? 16,
+    id: bMap['id_lote'] ?? bMap['id lote'] ?? bMap['id'] ?? 0,
+    cuit: bMap['cuit_vend'] ?? bMap['cuit vend'] ?? bMap['cuit'] ?? 16,
     un: bMap['un'] ?? 7,
-    repVend: bMap['repre_vendedor'] ?? 20,
-    repComp: bMap['repre_comprador'] ?? 21,
+    repVend: bMap['repre_vendedor'] ?? bMap['repre vendedor'] ?? bMap['repre_vend'] ?? 20,
+    repComp: bMap['repre_comprador'] ?? bMap['repre comprador'] ?? bMap['repre_comp'] ?? 21,
   };
-  (baseRaw.rows || []).forEach(row => {
+  (baseRaw || []).slice(1).forEach(row => {
     const ac      = norm(g(row, idxB.ac));
     const repVend = norm(g(row, idxB.repVend));
     const repComp = norm(g(row, idxB.repComp));
@@ -202,28 +202,28 @@ async function loadData() {
   // ── OPS ──
   const ops = [];
   const oMap = {};
-  if (opsRaw && opsRaw.headers) {
-    opsRaw.headers.forEach((h, i) => oMap[h] = i);
+  if (opsRaw && opsRaw[0]) {
+    opsRaw[0].forEach((h, i) => { if (h) oMap[String(h).trim().toLowerCase()] = i; });
   }
   const idxO = {
-    aV: oMap['asoc_com_vend'] ?? 6,
-    aC: oMap['asoc_com_compra'] ?? 8,
-    rV: oMap['repre_vendedor'] ?? 34,
-    rC: oMap['repre_comprador'] ?? 35,
-    f: oMap['fecha_operacion'] ?? 2,
-    cargAc: oMap['op_carga'] ?? 22,
-    cargF: oMap['fecha_carga'] ?? 18,
-    qTot: oMap['q'] ?? 9,
-    socV: oMap['rs_vendedora'] ?? 5,
-    socC: oMap['rs_compradora'] ?? 7,
+    aV: oMap['asoc_com_vend'] ?? oMap['asoc com vend'] ?? 6,
+    aC: oMap['asoc_com_compra'] ?? oMap['asoc com compra'] ?? 8,
+    rV: oMap['repre_vendedor'] ?? oMap['repre vendedor'] ?? 34,
+    rC: oMap['repre_comprador'] ?? oMap['repre comprador'] ?? 35,
+    f: oMap['fecha_operacion'] ?? oMap['fecha operacion'] ?? 2,
+    cargAc: oMap['op_carga'] ?? oMap['op carga'] ?? 22,
+    cargF: oMap['fecha_carga'] ?? oMap['fecha carga'] ?? 18,
+    qTot: oMap['q'] ?? oMap['q total'] ?? 9,
+    socV: oMap['rs_vendedora'] ?? oMap['rs vendedora'] ?? 5,
+    socC: oMap['rs_compradora'] ?? oMap['rs compradora'] ?? 7,
     id: oMap['id'] ?? 0,
     un: oMap['un'] ?? 1,
-    cat: oMap['cat'] ?? 10,
-    cuitV: oMap['cuit_vend'] ?? 20,
-    cuitC: oMap['cuit_comp'] ?? 21,
-    qPart: oMap['q_particular'] ?? 16
+    cat: oMap['cat'] ?? oMap['categoria'] ?? 10,
+    cuitV: oMap['cuit_vend'] ?? oMap['cuit vend'] ?? 20,
+    cuitC: oMap['cuit_comp'] ?? oMap['cuit comp'] ?? 21,
+    qPart: oMap['q_particular'] ?? oMap['q particular'] ?? 16
   };
-  (opsRaw.rows || []).forEach(row => {
+  (opsRaw || []).slice(1).forEach(row => {
     const aV = norm(g(row, idxO.aV)), aC = norm(g(row, idxO.aC));
     const rV = norm(g(row, idxO.rV)), rC = norm(g(row, idxO.rC));
     if (!aV && !aC && !rV && !rC) return;
@@ -652,7 +652,12 @@ async function getReport(ac, startTs, endTs, opts) {
         const dataC = cuitKtKvMap[cuitC] || { kt: row[10] || '-', kv: '-' };
         r.detC.push({ id: row[8], un: row[9], soc: row[6], fecha: row[7], q: row[4], kt: dataC.kt, kv: dataC.kv });
       }
-      const cuitLookup = String(row[14] || '').trim();
+      // En la UI de Front: "Si soy vendedor muestro el comprador, si soy comprador muestro al vendedor"
+      // Por ende, la CUIT a buscar para Kt/Kv debe coincidir con la entidad mostrada en UI.
+      const cuitLookup = isV 
+        ? String(row[15] || '').trim() // cuitC
+        : String(row[14] || '').trim(); // cuitV
+      
       const ktKv = cuitKtKvMap[cuitLookup] || { kt: '-', kv: '-' };
       const tieneCargar = isCargForAc ? 'Sí' : '';
       const acLado = isV && isC ? 'vend/comp' : (isV ? 'vend' : 'comp');
