@@ -1,22 +1,16 @@
-const { fetchMetabaseQuery } = require('./_lib/metabase');
-
+const { fetchMetabaseToken } = require('./_lib/metabase');
 module.exports = async (req, res) => {
   try {
-    const data101 = await fetchMetabaseQuery(101).catch(e => ({ error: e.message, stack: e.stack }));
-    const data102 = await fetchMetabaseQuery(102).catch(e => ({ error: e.message, stack: e.stack }));
-    
-    res.json({
-      envCheck: {
-        hasUrl: !!process.env.METABASE_URL,
-        hasUser: !!process.env.METABASE_USER,
-        hasPass: !!process.env.METABASE_PASS
-      },
-      q101: data101.error ? data101.error : `Success: ${data101.rows?.length} rows`,
-      q101stack: data101.stack,
-      q102: data102.error ? data102.error : `Success: ${data102.rows?.length} rows`,
-      q102stack: data102.stack,
+    const t = await fetchMetabaseToken();
+    const q101res = await fetch(t.baseUrl + 'api/card/101/query', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Metabase-Session': t.id },
+      body: JSON.stringify({ ignore_cache: false, parameters: [] })
     });
-  } catch (error) {
-    res.status(500).json({ globalError: error.message });
-  }
+    const text = await q101res.text();
+    res.json({
+      status: q101res.status,
+      slice: text.substring(0, 500)
+    });
+  } catch(e) { res.status(500).json({ err: e.message }); }
 };
