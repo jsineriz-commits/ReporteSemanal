@@ -373,10 +373,11 @@ async function loadData() {
   const data = { 
     base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull,
     debugIdxB: idxB,
-    debugHeadersBASE: Object.keys(bMap)
+    debugHeadersBASE: Object.keys(bMap),
+    debugAgendasRAW: agendasRaw && agendasRaw[0] ? agendasRaw[0] : []
   };
   cache.set('data', data, cache.TTL.DATA);
-  console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} completado.`);
+  console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} agendas=${agendas.length} completado.`);
   return data;
 }
 
@@ -996,6 +997,7 @@ async function getReport(ac, startTs, endTs, opts) {
   // DEBUG (Eliminar luego)
   r.debugAgendas = D.agendas.filter(a => a[0] === acMail);
   r.debugComs    = D.coms.filter(a => a[0] === acMail);
+  r.debugAgendasRAW = D.debugAgendasRAW || [];
 
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);
