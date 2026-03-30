@@ -275,11 +275,11 @@ async function loadData() {
   });
 
   // ── AGENDA CRM ──
-  // A(0)=ID Lead, B(1)=Titulo Lead (El usuario pidió esto como ID Lead), C(2)=Agendado por, D(3)=Fecha Agendado
+  // A(0)=ID Lead, B(1)=ID Lead (Usado), C(2)=Título Lead, D(3)=Agendado por, E(4)=Fecha Agendado
   const agendas = [];
   agendasRaw.slice(1).forEach(row => {
-    const mail = String(g(row, 2) || '').trim().toLowerCase(); if (!mail) return;
-    const originalDate = String(g(row, 3) || '').trim(); // Columna D
+    const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return; // Col D
+    const originalDate = String(g(row, 4) || '').trim(); // Col E
     const f    = toDateStr(originalDate); if (!f) return;
     const fStr = f.length === 8 ? `${f.slice(6,8)}/${f.slice(4,6)}/${f.slice(0,4)}` : originalDate;
     
@@ -287,10 +287,10 @@ async function loadData() {
       mail, 
       f, 
       toDayIdx(originalDate),
-      g(row, 1) || '',         // 3 soc (Titulo Lead, Col B)
+      g(row, 2) || '',         // 3 soc (Título Lead, Col C)
       fStr,                    // 4 comentario (fecha legible DD/MM/YYYY)
       'Agenda',                // 5 tipo
-      String(g(row, 1) || ''), // 6 idLead (Titulo Lead, Col B)
+      String(g(row, 1) || ''), // 6 idLead (ID Lead, Col B)
     ]);
   });
 
