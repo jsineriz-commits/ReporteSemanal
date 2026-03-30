@@ -35,38 +35,39 @@ async function fetchMetabaseQuery(questionId) {
   const params = new URLSearchParams();
   params.append('parameters', '[]');
 
-  const res = await fetch(tokenData.baseUrl + `api/card/${questionId}/query/json`, {
+  const res = await fetch(tokenData.baseUrl + `api/card/${questionId}/query`, {
     method:  'POST',
     headers: {
-      'Content-Type':        'application/x-www-form-urlencoded',
+      'Content-Type':        'application/json',
       'X-Metabase-Session':  tokenData.id,
     },
-    body: params.toString(),
+    body: JSON.stringify({ ignore_cache: false, parameters: [] }),
     signal: AbortSignal.timeout(90000),
   });
 
-  if (!res.ok) {
-    throw new Error(`Metabase JSON Export error para Q${questionId} (${res.status})`);
-  }
-
-  let jsonArray;
+  let jsonRes;
   try {
-    jsonArray = await res.json();
+    // Obtenemos el texto para loguear si falla el parseo
+    const rawText = await res.text();
+    jsonRes = JSON.parse(rawText);
   } catch (e) {
-    throw new Error(`Metabase devolvió respuesta inválida JSON Export para Q${questionId} (${res.status})`);
+    throw new Error(`Metabase devolvió respuesta inválida para Q${questionId} (${res.status}).`);
   }
 
-  if (!Array.isArray(jsonArray)) {
-    throw new Error(`Error en Metabase Export Q${questionId}: No devolvió un array.`);
+  if (jsonRes.status === "failed") {
+    throw new Error(`Metabase Error en Q${questionId}: ${jsonRes.error || "failed"}`);
   }
 
-  if (jsonArray.length === 0) {
+  if (!jsonRes.data || !Array.isArray(jsonRes.data.rows)) {
+    throw new Error(`Error en Metabase Export Q${questionId}: Estructura JSON inesperada.`);
+  }
+
+  if (jsonRes.data.rows.length === 0) {
     return { rows: [], headers: [] };
   }
 
-  const rawHeaders = Object.keys(jsonArray[0]);
-  const headers = rawHeaders.map(h => h.trim().toLowerCase());
-  const rows = jsonArray.map(obj => rawHeaders.map(h => obj[h]));
+  const headers = jsonRes.data.cols.map(c => (c.name || '').trim().toLowerCase());
+  const rows = jsonRes.data.rows;
 
   return { rows, headers };
 }
