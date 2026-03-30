@@ -2,9 +2,9 @@
 const process = require('process');
 
 async function fetchMetabaseToken() {
-  const rawUrl  = process.env.METABASE_URL;
-  const mbUser  = process.env.METABASE_USER;
-  const mbPass  = process.env.METABASE_PASS;
+  const rawUrl  = (process.env.METABASE_URL || '').trim();
+  const mbUser  = (process.env.METABASE_USER || '').trim();
+  const mbPass  = (process.env.METABASE_PASS || '').trim();
 
   if (!rawUrl || !mbUser || !mbPass) {
     throw new Error('Configuración Metabase incompleta en Vercel (faltan METABASE_URL, METABASE_USER o METABASE_PASS).');
