@@ -154,16 +154,16 @@ async function loadData() {
     baseRaw[0].forEach((h, i) => { if (h) bMap[String(h).trim().toLowerCase()] = i; });
   }
   const idxB = {
-    ac: bMap['ac_vend'] ?? bMap['ac vendedor'] ?? 5,
-    f: bMap['fecha_publicaciones'] ?? bMap['fecha publicaciones'] ?? bMap['fecha'] ?? 1,
-    soc: bMap['sociedad_vendedora'] ?? bMap['sociedad vendedora'] ?? bMap['soc'] ?? 2,
-    cab: bMap['cabezas'] ?? 4,
+    ac: bMap['ac_vend'] ?? bMap['ac vendedor'] ?? bMap['asociado_comercial'] ?? bMap['asociado comercial'] ?? 5,
+    f: bMap['fecha_publicaciones'] ?? bMap['fecha publicaciones'] ?? bMap['fecha'] ?? bMap['f_crea'] ?? bMap['created_at'] ?? 1,
+    soc: bMap['sociedad_vendedora'] ?? bMap['sociedad vendedora'] ?? bMap['soc'] ?? bMap['razon_social'] ?? bMap['razon social'] ?? 2,
+    cab: bMap['cabezas'] ?? bMap['q'] ?? 4,
     est: bMap['estado'] ?? 3,
-    cot: bMap['cotizada'] ?? 6,
+    cot: bMap['cotizada'] ?? bMap['cotizado'] ?? 6,
     id: bMap['id_lote'] ?? bMap['id lote'] ?? bMap['id'] ?? 0,
-    cuit: bMap['cuit_vend'] ?? bMap['cuit vend'] ?? bMap['cuit'] ?? 16,
-    un: bMap['un'] ?? 7,
-    repVend: bMap['repre_vendedor'] ?? bMap['repre vendedor'] ?? bMap['repre_vend'] ?? 20,
+    cuit: bMap['cuit_vend'] ?? bMap['cuit vend'] ?? bMap['cuit_empresa'] ?? bMap['cuit empresa'] ?? bMap['cuit'] ?? 16,
+    un: bMap['un'] ?? bMap['unidad_negocio'] ?? 7,
+    repVend: bMap['repre_vendedor'] ?? bMap['repre vendedor'] ?? bMap['repre_vend'] ?? bMap['representante'] ?? 20,
     repComp: bMap['repre_comprador'] ?? bMap['repre comprador'] ?? bMap['repre_comp'] ?? 21,
   };
   (baseRaw || []).slice(1).forEach(row => {
