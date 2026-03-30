@@ -364,7 +364,11 @@ async function loadData() {
     bcfull.push([cuit, String(g(row, 3) || ''), String(g(row, 4) || '')]);
   });
 
-  const data = { base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull };
+  const data = { 
+    base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull,
+    debugIdxB: idxB,
+    debugHeadersBASE: Object.keys(bMap)
+  };
   cache.set('data', data, cache.TTL.DATA);
   console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} completado.`);
   return data;
@@ -982,6 +986,10 @@ async function getReport(ac, startTs, endTs, opts) {
   r.rankingOfrecidas = toRnk(rOfrec);
   r.rankingCompradas = toRnk(rComp);
   r.rankingOperadas  = toRnk(rOper);
+
+  // DEBUG (Eliminar luego)
+  r.debugHeadersBASE = D.debugHeadersBASE || [];
+  r.debugIdxB = D.debugIdxB || {};
 
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);
