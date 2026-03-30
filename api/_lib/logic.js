@@ -993,6 +993,10 @@ async function getReport(ac, startTs, endTs, opts) {
   r.rankingCompradas = toRnk(rComp);
   r.rankingOperadas  = toRnk(rOper);
 
+  // DEBUG (Eliminar luego)
+  r.debugAgendas = D.agendas.filter(a => a[0] === acMail);
+  r.debugComs    = D.coms.filter(a => a[0] === acMail);
+
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);
   return r;
