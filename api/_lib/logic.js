@@ -19,7 +19,13 @@ function parseSheetDate(val) {
     return new Date((val - 25569) * 86400000 + 43200000); // UTC noon
   }
   if (typeof val === 'string') {
-    const d = new Date(val);
+    const s = val.trim();
+    // Parsear DD/MM/YYYY o DD-MM-YYYY
+    const ddmmyyyy = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/.exec(s);
+    if (ddmmyyyy) {
+      return new Date(Date.UTC(Number(ddmmyyyy[3]), Number(ddmmyyyy[2]) - 1, Number(ddmmyyyy[1]), 12));
+    }
+    const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
   }
   return null;
@@ -986,10 +992,6 @@ async function getReport(ac, startTs, endTs, opts) {
   r.rankingOfrecidas = toRnk(rOfrec);
   r.rankingCompradas = toRnk(rComp);
   r.rankingOperadas  = toRnk(rOper);
-
-  // DEBUG (Eliminar luego)
-  r.debugHeadersBASE = D.debugHeadersBASE || [];
-  r.debugIdxB = D.debugIdxB || {};
 
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);
