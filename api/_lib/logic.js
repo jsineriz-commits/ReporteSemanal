@@ -530,15 +530,38 @@ async function getReport(ac, startTs, endTs, opts) {
 
   // ── Mapa CUIT → Kt, Kv ──
   const cuitKtKvMap = {};
+  const fuzzyCuitMap = {}; // Fallback para CUITs mutilados por Notación Científica en Google Sheets
+
+  function addKtKv(cuit, kt, kv) {
+    if (!cuit) return;
+    if (!cuitKtKvMap[cuit]) cuitKtKvMap[cuit] = { kt: kt, kv: kv || '-' };
+    if (cuit.length >= 10) {
+      const fuzzyKey = cuit.slice(0, 10);
+      if (!fuzzyCuitMap[fuzzyKey]) fuzzyCuitMap[fuzzyKey] = { kt: kt, kv: kv || '-' };
+    }
+  }
+
   // 1. Prioridad: aux leads (por CUIT en col AA = idx 12 del array procesado)
   for (const row of D.auxLeads) {
-    const cuit = String(row[12] || '').trim();
-    if (cuit && !cuitKtKvMap[cuit]) cuitKtKvMap[cuit] = { kt: row[4], kv: row[5] || '-' };
+    addKtKv(String(row[12] || '').trim(), row[4], row[5]);
   }
   // 2. Complemento: BCFULL
   for (const row of D.bcfull) {
-    const cuit = String(row[0] || '').trim();
-    if (cuit && !cuitKtKvMap[cuit]) cuitKtKvMap[cuit] = { kt: row[1], kv: row[2] || '-' };
+    addKtKv(String(row[0] || '').trim(), row[1], row[2]);
+  }
+
+  function getKtKv(cuitStr) {
+    let ktKv = cuitKtKvMap[cuitStr];
+    if (ktKv) return ktKv;
+    // Fallback: Si Sheets devolvió "2.018050136E+10"
+    if (cuitStr.toLowerCase().includes('e')) {
+      const parsed = parseFloat(cuitStr);
+      if (!isNaN(parsed)) {
+        const truncStr = String(Math.trunc(parsed)); 
+        ktKv = fuzzyCuitMap[truncStr.slice(0, 10)];
+      }
+    }
+    return ktKv || { kt: '-', kv: '-' };
   }
 
   // ── BASE ──
@@ -565,7 +588,7 @@ async function getReport(ac, startTs, endTs, opts) {
       if (row[2] >= 0) r.dT[row[2]]++;
 
       const cuitOf = String(row[11] || '').trim();
-      const dataOf = cuitKtKvMap[cuitOf] || { kt: '-', kv: '-' };
+      const dataOf = getKtKv(cuitOf);
       const fStr   = String(f || '');
       const fFmt   = fStr.length === 8
         ? `${fStr.slice(6,8)}/${fStr.slice(4,6)}/${fStr.slice(0,4)}`
@@ -616,7 +639,7 @@ async function getReport(ac, startTs, endTs, opts) {
         ? `${fCS.slice(6,8)}/${fCS.slice(4,6)}/${fCS.slice(0,4)}`
         : fCS;
       const cuitLookupCarg = String(row[14] || '').trim();
-      const dataCarg = cuitKtKvMap[cuitLookupCarg] || { kt: '-', kv: '-' };
+      const dataCarg = getKtKv(cuitLookupCarg);
       r.detCarg.push({
         id:    String(row[8] || ''),
         fecha: fCFmt,
@@ -649,16 +672,17 @@ async function getReport(ac, startTs, endTs, opts) {
         r.cabC += row[4];
         if (row[6]) socCompraWeek[row[6]] = 1;
         const cuitC = String(row[15] || '').trim();
-        const dataC = cuitKtKvMap[cuitC] || { kt: row[10] || '-', kv: '-' };
+        const dataC = getKtKv(cuitC);
         r.detC.push({ id: row[8], un: row[9], soc: row[6], fecha: row[7], q: row[4], kt: dataC.kt, kv: dataC.kv });
       }
-      // En la UI de Front: "Si soy vendedor muestro el comprador, si soy comprador muestro al vendedor"
-      // Por ende, la CUIT a buscar para Kt/Kv debe coincidir con la entidad mostrada en UI.
+      // El Kt/Kv mostrado en "Top Negocios" corresponde al cliente del AC.
+      // Si el AC es Vendedor (isV), mostramos el Kt/Kv del Vendedor (cuitV).
+      // Si el AC es Comprador (isC), mostramos el Kt/Kv del Comprador (cuitC).
       const cuitLookup = isV 
-        ? String(row[15] || '').trim() // cuitC
-        : String(row[14] || '').trim(); // cuitV
+        ? String(row[14] || '').trim() // cuitV
+        : String(row[15] || '').trim(); // cuitC
       
-      const ktKv = cuitKtKvMap[cuitLookup] || { kt: '-', kv: '-' };
+      const ktKv = getKtKv(cuitLookup);
       const tieneCargar = isCargForAc ? 'Sí' : '';
       const acLado = isV && isC ? 'vend/comp' : (isV ? 'vend' : 'comp');
       allOps.push({ q: row[4], kt: ktKv.kt, kv: ktKv.kv, d: [row[8], row[9], row[5], row[0], row[6], row[1], row[7], row[4], tieneCargar, acLado] });
@@ -675,7 +699,7 @@ async function getReport(ac, startTs, endTs, opts) {
         seenSemMes[w][opKey] = 1;
         r.operSemMesVals[w] += row[4];
         const cuitLkp = String(row[14] || '').trim();
-        const ktkvW   = cuitKtKvMap[cuitLkp] || { kt: '-', kv: '-' };
+        const ktkvW   = getKtKv(cuitLkp);
         r.operSemMesDets[w].push({ id: row[8], un: row[9], soc: String(row[5] || row[6] || '-'), fecha: row[7], q: row[4], kt: ktkvW.kt, kv: ktkvW.kv });
       }
       break;
