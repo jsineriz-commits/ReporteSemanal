@@ -1,16 +1,13 @@
-const { fetchMetabaseToken } = require('./_lib/metabase');
+const { fetchMetabaseQuery } = require('./_lib/metabase');
 module.exports = async (req, res) => {
   try {
-    const t = await fetchMetabaseToken();
-    const q101res = await fetch(t.baseUrl + 'api/card/101/query', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'X-Metabase-Session': t.id },
-      body: JSON.stringify({ ignore_cache: false, parameters: [] })
-    });
-    const text = await q101res.text();
+    const q101 = await fetchMetabaseQuery(101);
+    const q102 = await fetchMetabaseQuery(102);
     res.json({
-      status: q101res.status,
-      slice: text.substring(0, 500)
+      h101: q101.headers,
+      h102: q102.headers,
+      q101rows: q101.rows.length,
+      q102rows: q102.rows.length
     });
   } catch(e) { res.status(500).json({ err: e.message }); }
 };
