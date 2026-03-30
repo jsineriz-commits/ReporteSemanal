@@ -1589,6 +1589,7 @@
       var panel = eid('side-panel');
       var title = eid('sp-detail-title');
       var content = eid('sp-content');
+      var closeBtn = eid('sp-close-btn');
 
       var panelTitle = '';
       if (type === 'of') panelTitle = 'Detalle de Cabezas Ofrecidas';
@@ -1598,6 +1599,7 @@
 
       title.innerText = panelTitle;
       panel.classList.add('is-visible');
+      if (closeBtn) closeBtn.style.display = '';
 
       // Forzar redibujado de gráficos al cambiar el layout
       setTimeout(redrawCharts, 50);
