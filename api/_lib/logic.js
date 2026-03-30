@@ -279,9 +279,10 @@ async function loadData() {
   const agendas = [];
   agendasRaw.slice(1).forEach(row => {
     const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return; // Col D
-    const originalDate = String(g(row, 4) || '').trim(); // Col E
+    const originalDate = g(row, 4); // Col E (Data cruda como Number o String)
     const f    = toDateStr(originalDate); if (!f) return;
-    const fStr = f.length === 8 ? `${f.slice(6,8)}/${f.slice(4,6)}/${f.slice(0,4)}` : originalDate;
+    const strDate = String(originalDate || '').trim();
+    const fStr = f.length === 8 ? `${f.slice(6,8)}/${f.slice(4,6)}/${f.slice(0,4)}` : strDate;
     
     agendas.push([
       mail, 
@@ -371,10 +372,7 @@ async function loadData() {
   });
 
   const data = { 
-    base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull,
-    debugIdxB: idxB,
-    debugHeadersBASE: Object.keys(bMap),
-    debugAgendasRAW: agendasRaw ? agendasRaw.slice(1, 5) : []
+    base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull
   };
   cache.set('data', data, cache.TTL.DATA);
   console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} agendas=${agendas.length} completado.`);
@@ -993,11 +991,6 @@ async function getReport(ac, startTs, endTs, opts) {
   r.rankingOfrecidas = toRnk(rOfrec);
   r.rankingCompradas = toRnk(rComp);
   r.rankingOperadas  = toRnk(rOper);
-
-  // DEBUG (Eliminar luego)
-  r.debugAgendas = D.agendas.filter(a => a[0] === acMail);
-  r.debugComs    = D.coms.filter(a => a[0] === acMail);
-  r.debugAgendasRAW = D.debugAgendasRAW || [];
 
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);
