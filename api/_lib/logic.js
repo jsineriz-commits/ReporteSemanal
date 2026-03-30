@@ -992,6 +992,9 @@ async function getReport(ac, startTs, endTs, opts) {
   r.rankingCompradas = toRnk(rComp);
   r.rankingOperadas  = toRnk(rOper);
 
+  // DEBUG temporal para ver quién tiene agendas en la fecha actual
+  r.debugMailsConAgenda = Array.from(new Set(D.agendas.filter(a => inS(a[1])).map(a => a[0])));
+
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);
   return r;
