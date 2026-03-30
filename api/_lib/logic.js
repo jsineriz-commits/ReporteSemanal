@@ -374,7 +374,7 @@ async function loadData() {
     base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull,
     debugIdxB: idxB,
     debugHeadersBASE: Object.keys(bMap),
-    debugAgendasRAW: agendasRaw && agendasRaw[0] ? agendasRaw[0] : []
+    debugAgendasRAW: agendasRaw ? agendasRaw.slice(1, 5) : []
   };
   cache.set('data', data, cache.TTL.DATA);
   console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} agendas=${agendas.length} completado.`);
