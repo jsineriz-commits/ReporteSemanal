@@ -99,6 +99,7 @@ async function getConfig() {
 
     if (nombre && mail) {
       acMap[nombre] = mail;
+      acMap[norm(nombre)] = mail;
       if (idx >= 29) {
         if (!repsList.includes(nombre)) repsList.push(nombre);
       } else {
