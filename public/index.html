@@ -2069,7 +2069,7 @@
       clone.style.background = '#fff';
 
       var chartsRow = clone.querySelector('.charts-row');
-      if (chartsRow) chartsRow.style.gridTemplateColumns = '1.2fr 1fr'; // keep side by side
+      if (chartsRow) chartsRow.style.gridTemplateColumns = '1fr'; // Apilar verticalmente para PDF según requerimiento del usuario
       var box = clone.querySelector('#chartBox') || clone.querySelector('.chart-box');
       if (box) box.style.height = PDF_CHART_H + 'px';
       var boxOper = clone.querySelector('#chartOperBox');
@@ -2242,39 +2242,23 @@
                   setTimeout(function () {
 
                     var pdfName = 'Reporte_' + nombre.replace(/\s+/g, '_') + '_S' + week + '.pdf';
+                    var pdfWrapper = buildPdfReportClone();
+                    if (!pdfWrapper) {
+                      noEnviados.push(nombre + ' — error clona pdf'); procesarSiguiente(); return;
+                    }
 
-                    // Aplicar altura reducida al chart-box directamente (DOM inline)
-                    prepararParaPDF();
+                    var content = pdfWrapper.firstChild;
+                    var hPx = content.scrollHeight || content.offsetHeight;
+                    var hMm = (hPx * 0.264583) + 10;
 
-                    // rAF1: layout aplicado
                     requestAnimationFrame(function () {
-                      // Redibujar canvas al nuevo tamaño
-                      if (LAST_CHART_SERIES)
-                        drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
-                      if (LAST_OPER_SERIES)
-                        drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
-
-                      // rAF2: canvas pintado, capturar
-                      requestAnimationFrame(function () {
-                        var rptNode = eid('rpt');
-                        var hPx = rptNode.scrollHeight || rptNode.offsetHeight;
-                        var hMm = (hPx * 0.264583) + 10;
-                        html2pdf()
-                          .set(getPdfOptions(pdfName, hMm))
-                          .from(rptNode)
-                          .outputPdf('blob')
-                          .then(function (pdfBlob) {
-
-                            // Restaurar chart-box y redibujar normal
-                            restaurarDespuesDePDF();
-                            requestAnimationFrame(function () {
-                              if (LAST_CHART_SERIES)
-                                drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
-                              if (LAST_OPER_SERIES)
-                                drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
-                            });
-
-                            slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
+                      html2pdf()
+                        .set(getPdfOptions(pdfName, hMm))
+                        .from(content)
+                        .outputPdf('blob')
+                        .then(function (pdfBlob) {
+                          cleanupPdfReportClone(pdfWrapper);
+                          slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
 
                             var reader = new FileReader();
                             reader.onloadend = function () {
@@ -2305,13 +2289,12 @@
                                 .sendEmailWithPDF(nombre, email, cc, folderId, base64, pdfName, finalBody);
                             };
                             reader.readAsDataURL(pdfBlob);
-                          })
-                          .catch(function (e) {
-                            restaurarDespuesDePDF();
-                            noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
-                            procesarSiguiente();
-                          });
-                      });
+                        })
+                        .catch(function (e) {
+                          cleanupPdfReportClone(pdfWrapper);
+                          noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
+                          procesarSiguiente();
+                        });
                     });
 
                   }, 600);
