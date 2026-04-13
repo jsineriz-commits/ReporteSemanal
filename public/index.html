@@ -2069,7 +2069,7 @@
       clone.style.background = '#fff';
 
       var chartsRow = clone.querySelector('.charts-row');
-      if (chartsRow) chartsRow.style.gridTemplateColumns = '1fr'; // Apilar verticalmente para PDF según requerimiento del usuario
+      if (chartsRow) chartsRow.style.gridTemplateColumns = '1.2fr 1fr';
       var box = clone.querySelector('#chartBox') || clone.querySelector('.chart-box');
       if (box) box.style.height = PDF_CHART_H + 'px';
       var boxOper = clone.querySelector('#chartOperBox');
