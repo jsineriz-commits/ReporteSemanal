@@ -718,7 +718,7 @@ async function getReport(ac, startTs, endTs, opts) {
         r.operSemMesVals[w] += row[4];
         const cuitLkp = String(row[14] || '').trim();
         const ktkvW   = getKtKv(cuitLkp);
-        r.operSemMesDets[w].push({ id: row[8], un: row[9], soc: String(row[5] || row[6] || '-'), fecha: row[7], q: row[4], kt: ktkvW.kt, kv: ktkvW.kv });
+        r.operSemMesDets[w].push({ id: row[8], un: row[9], soc: String(row[5] || row[6] || '-'), fecha: row[7], q: row[4], kt: ktkvW.kt, kv: ktkvW.kv, lado: acLado });
       }
       break;
     }
