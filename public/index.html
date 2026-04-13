@@ -2024,6 +2024,7 @@
         html2canvas: {
           scale: 2,
           useCORS: true,
+          windowWidth: 690,
           allowTaint: true,
           logging: false,
           // onclone: copiar el canvas a mano porque html2canvas no lo transfiere solo
@@ -2060,15 +2061,20 @@
 
       var wrapper = document.createElement('div');
       wrapper.style.position = 'fixed';
-      wrapper.style.left = '-10000px';
+      wrapper.style.left = '0';
       wrapper.style.top = '0';
       wrapper.style.width = PDF_WIDTH + 'px';
       wrapper.style.background = '#fff';
-      wrapper.style.zIndex = '-1';
+      wrapper.style.zIndex = '-9999';
+      wrapper.style.opacity = '0.01';
+      wrapper.style.pointerEvents = 'none';
 
       var clone = rpt.cloneNode(true);
       clone.classList.add('is-pdf');
       clone.style.width = PDF_WIDTH + 'px';
+      clone.style.maxWidth = PDF_WIDTH + 'px';
+      clone.style.overflow = 'hidden';
+      clone.style.boxSizing = 'border-box';
       clone.style.background = '#fff';
 
       var chartsRow = clone.querySelector('.charts-row');
