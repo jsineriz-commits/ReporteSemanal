@@ -275,21 +275,19 @@ async function loadData() {
   });
 
   // ── AGENDA CRM ──
-  // A(0)=ID Lead, B(1)=ID Lead (Usado), C(2)=Título Lead, D(3)=Agendado por, E(4)=Fecha Agendado
+  // A(0)=ID Lead, B(1)=ID Lead (Usado), C(2)=Título Lead, D(3)=Agendado por, E(4)=Fecha Agendado, F(5)=Comentario/Detalle
   const agendas = [];
   agendasRaw.slice(1).forEach(row => {
     const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return; // Col D
     const originalDate = g(row, 4); // Col E (Data cruda como Number o String)
     const f    = toDateStr(originalDate); if (!f) return;
-    const strDate = String(originalDate || '').trim();
-    const fStr = f.length === 8 ? `${f.slice(6,8)}/${f.slice(4,6)}/${f.slice(0,4)}` : strDate;
     
     agendas.push([
       mail, 
       f, 
       toDayIdx(originalDate),
       g(row, 2) || '',         // 3 soc (Título Lead, Col C)
-      fStr,                    // 4 comentario (fecha legible DD/MM/YYYY)
+      g(row, 5) || '',         // 4 comentario (Columna F)
       'Agenda',                // 5 tipo
       String(g(row, 1) || ''), // 6 idLead (ID Lead, Col B)
     ]);
