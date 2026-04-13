@@ -837,8 +837,8 @@ async function getReport(ac, startTs, endTs, opts) {
     }
     if (row[3] && row[1] && row[1] <= fin_) prevSocSinGestSet[socKey] = 1;
 
-    if (!row[3] && socKey && row[1] && inS(row[1])) {
-      if (!auxByLead[socKey] || row[1] > (auxByLead[socKey].fa || ''))
+    if (socKey) {
+      if (!auxByLead[socKey] || (row[1] && row[1] > (auxByLead[socKey].fa || '')))
         auxByLead[socKey] = { kt: row[4], kv: row[5], fa: row[1], fuente: row[13], estado: row[15], cm: row[14], tipo: 'Asignación', soc: row[6], idLead: row[16] };
     }
   }
