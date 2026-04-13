@@ -2024,7 +2024,6 @@
         html2canvas: {
           scale: 2,
           useCORS: true,
-          windowWidth: 690,
           allowTaint: true,
           logging: false,
           // onclone: copiar el canvas a mano porque html2canvas no lo transfiere solo
@@ -2064,17 +2063,12 @@
       wrapper.style.left = '-10000px';
       wrapper.style.top = '0';
       wrapper.style.width = PDF_WIDTH + 'px';
-      wrapper.style.maxWidth = PDF_WIDTH + 'px';
-      wrapper.style.overflow = 'hidden';
       wrapper.style.background = '#fff';
       wrapper.style.zIndex = '-1';
 
       var clone = rpt.cloneNode(true);
       clone.classList.add('is-pdf');
       clone.style.width = PDF_WIDTH + 'px';
-      clone.style.maxWidth = PDF_WIDTH + 'px';
-      clone.style.overflow = 'hidden';
-      clone.style.boxSizing = 'border-box';
       clone.style.background = '#fff';
 
       var chartsRow = clone.querySelector('.charts-row');
@@ -2086,19 +2080,13 @@
       var smKpis = clone.querySelector('#sm-kpis');
       if (smKpis) smKpis.style.gap = '4px';
 
-      // Canvas elements are blank after cloneNode — replace each with a static img snapshot
-      var liveCanvases = rpt.querySelectorAll('canvas');
+      // Limpiar tamaños inline de Chart.js para que las grillas css puedan contraer los canvas sin explotar
       var cloneCanvases = clone.querySelectorAll('canvas');
-      for (var ci = 0; ci < liveCanvases.length; ci++) {
-        var lc = liveCanvases[ci];
-        var cc = cloneCanvases[ci];
-        if (!cc) continue;
-        var img = document.createElement('img');
-        img.src = lc.toDataURL('image/png');
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.display = 'block';
-        cc.parentNode.replaceChild(img, cc);
+      for (var ci = 0; ci < cloneCanvases.length; ci++) {
+        cloneCanvases[ci].style.width = '100%';
+        cloneCanvases[ci].style.height = '100%';
+        cloneCanvases[ci].removeAttribute('width');
+        cloneCanvases[ci].removeAttribute('height');
       }
 
       wrapper.appendChild(clone);
