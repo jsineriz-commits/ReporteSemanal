@@ -484,7 +484,8 @@
       justify-content: space-between;
       align-items: baseline;
       gap: 10px;
-      margin-bottom: 6px
+      margin-bottom: 6px;
+      flex-wrap: wrap;
     }
 
     .kpi-big .kvlead {
@@ -492,6 +493,7 @@
       align-items: baseline;
       gap: 10px;
       min-width: 0;
+      flex-wrap: wrap;
     }
 
     .kpi-big .ksplit {
@@ -1350,7 +1352,7 @@
         '</div></div>';
       eid('kpi-of').innerHTML =
         '<div class="kl">Cabezas Ofrecidas</div>' +
-        '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div><span class="chip cbl" style="padding:2px 8px; font-size:10px;">' + NN(d.cabPublicadas || 0) + ' siguen Publicadas/Ofrec.</span></div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
+        '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div><span class="chip cbl" style="padding:2px 8px; font-size:10px; line-height: 1.1;">' + NN(d.cabPublicadas || 0) + ' siguen<br>Publicadas/Ofrec.</span></div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
         '<div class="kmeta">' + (d.trop || 0) + ' Tropas &middot; ' + (d.socOf || 0) + ' Sociedades &middot; <span style="color:' + getCccColor(d.ccc || '0%') + '; font-weight:700;">' + (d.ccc || '0%') + ' CCC</span> &middot; <span style="font-weight:700;">' + (d.cotizadas || '0%') + ' Cotizadas</span></div>';
       eid('kpi-of').style.cursor = 'pointer';
       eid('kpi-of').onclick = function () { showDetailPanel('of', d.detOf || []); };
