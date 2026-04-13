@@ -1621,6 +1621,7 @@
         '.detail-row.expanded .detail-extra { display: block; } ' +
         '.detail-row.expanded .soc-main { display: none; } ' +
         '.detail-row td .un-tag { display: inline-block; padding: 2px 4px; font-size: 9px; box-sizing: border-box; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } ' +
+        '.detail-row.expanded td .un-tag { white-space: normal; text-overflow: clip; } ' +
         '</style>' +
         '<table class="compact-table" style="table-layout: fixed; width: 100%;"><thead>' + headHtml + '</thead><tbody>';
       list.forEach(function (item) {
