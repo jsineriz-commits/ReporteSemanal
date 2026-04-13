@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  
+
   <!-- ═══════════════════════════════════════════════════════════════════
        google.script.run SHIM
        Reemplaza todas las llamadas  google.script.run.withSuccessHandler(fn).metodo(args)
@@ -15,75 +15,75 @@
        El resto del JS del original no cambia.
   ═══════════════════════════════════════════════════════════════════════ -->
   <script>
-  (function () {
-    'use strict';
+    (function () {
+      'use strict';
 
-    // Mapa método → { url, method, params (GET) | bodyKeys (POST) }
-    var METHODS = {
-      getConfig: {
-        url: '/api/getConfig', method: 'GET'
-      },
-      warmup: {
-        url: '/api/warmUp', method: 'POST', bodyKeys: []
-      },
-      getReport: {
-        url: '/api/getReport', method: 'GET',
-        params: ['ac', 'startTs', 'endTs']
-      },
-      refreshCacheAndWarmup: {
-        url: '/api/refreshCacheAndWarmup', method: 'POST',
-        bodyKeys: ['ac', 'startTs', 'endTs']
-      },
-      getConfigData: {
-        url: '/api/getConfigData', method: 'GET'
-      },
-      sendEmailWithPDF: {
-        url: '/api/sendEmailWithPDF', method: 'POST',
-        bodyKeys: ['comercial', 'email', 'cc', 'folderId', 'pdfBase64', 'fileName', 'bodyText']
-      }
-    };
-
-    function Runner(sh, fh) { this._sh = sh || null; this._fh = fh || null; }
-
-    Runner.prototype.withSuccessHandler = function (fn) { return new Runner(fn, this._fh); };
-    Runner.prototype.withFailureHandler = function (fn) { return new Runner(this._sh, fn); };
-
-    Object.keys(METHODS).forEach(function (name) {
-      var cfg = METHODS[name];
-      Runner.prototype[name] = function () {
-        var self = this;
-        var args = Array.prototype.slice.call(arguments);
-        var url  = cfg.url;
-        var opts = { method: cfg.method };
-
-        if (cfg.method === 'GET' && cfg.params) {
-          var qs = cfg.params.map(function (k, i) {
-            return encodeURIComponent(k) + '=' + encodeURIComponent(args[i] !== undefined ? args[i] : '');
-          }).join('&');
-          url = url + (qs ? '?' + qs : '');
-        } else if (cfg.method === 'POST') {
-          var body = {};
-          if (cfg.bodyKeys) {
-            cfg.bodyKeys.forEach(function (k, i) {
-              if (args[i] !== undefined) body[k] = args[i];
-            });
-          }
-          opts.headers = { 'Content-Type': 'application/json' };
-          opts.body    = JSON.stringify(body);
+      // Mapa método → { url, method, params (GET) | bodyKeys (POST) }
+      var METHODS = {
+        getConfig: {
+          url: '/api/getConfig', method: 'GET'
+        },
+        warmup: {
+          url: '/api/warmUp', method: 'POST', bodyKeys: []
+        },
+        getReport: {
+          url: '/api/getReport', method: 'GET',
+          params: ['ac', 'startTs', 'endTs']
+        },
+        refreshCacheAndWarmup: {
+          url: '/api/refreshCacheAndWarmup', method: 'POST',
+          bodyKeys: ['ac', 'startTs', 'endTs']
+        },
+        getConfigData: {
+          url: '/api/getConfigData', method: 'GET'
+        },
+        sendEmailWithPDF: {
+          url: '/api/sendEmailWithPDF', method: 'POST',
+          bodyKeys: ['comercial', 'email', 'cc', 'folderId', 'pdfBase64', 'fileName', 'bodyText']
         }
-
-        fetch(url, opts)
-          .then(function (r) {
-            if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || 'HTTP ' + r.status); });
-            return r.json();
-          })
-          .then(function (data) { if (self._sh) self._sh(data); })
-          .catch(function (e)  { if (self._fh) self._fh(e);    });
       };
-    });
 
-    window.google = { script: { run: new Runner() } };
-  })();
+      function Runner(sh, fh) { this._sh = sh || null; this._fh = fh || null; }
+
+      Runner.prototype.withSuccessHandler = function (fn) { return new Runner(fn, this._fh); };
+      Runner.prototype.withFailureHandler = function (fn) { return new Runner(this._sh, fn); };
+
+      Object.keys(METHODS).forEach(function (name) {
+        var cfg = METHODS[name];
+        Runner.prototype[name] = function () {
+          var self = this;
+          var args = Array.prototype.slice.call(arguments);
+          var url = cfg.url;
+          var opts = { method: cfg.method };
+
+          if (cfg.method === 'GET' && cfg.params) {
+            var qs = cfg.params.map(function (k, i) {
+              return encodeURIComponent(k) + '=' + encodeURIComponent(args[i] !== undefined ? args[i] : '');
+            }).join('&');
+            url = url + (qs ? '?' + qs : '');
+          } else if (cfg.method === 'POST') {
+            var body = {};
+            if (cfg.bodyKeys) {
+              cfg.bodyKeys.forEach(function (k, i) {
+                if (args[i] !== undefined) body[k] = args[i];
+              });
+            }
+            opts.headers = { 'Content-Type': 'application/json' };
+            opts.body = JSON.stringify(body);
+          }
+
+          fetch(url, opts)
+            .then(function (r) {
+              if (!r.ok) return r.json().then(function (e) { throw new Error(e.error || 'HTTP ' + r.status); });
+              return r.json();
+            })
+            .then(function (data) { if (self._sh) self._sh(data); })
+            .catch(function (e) { if (self._fh) self._fh(e); });
+        };
+      });
+
+      window.google = { script: { run: new Runner() } };
+    })();
   </script>
 
   <style>
@@ -424,8 +424,7 @@
       box-shadow: var(--sh);
       padding: 16px;
       border: 1px solid var(--border);
-      margin-bottom: 12px;
-      min-width: 0;
+      margin-bottom: 12px
     }
 
     .sec-tight {
@@ -484,8 +483,7 @@
       justify-content: space-between;
       align-items: baseline;
       gap: 10px;
-      margin-bottom: 6px;
-      flex-wrap: wrap;
+      margin-bottom: 6px
     }
 
     .kpi-big .kvlead {
@@ -493,7 +491,6 @@
       align-items: baseline;
       gap: 10px;
       min-width: 0;
-      flex-wrap: wrap;
     }
 
     .kpi-big .ksplit {
@@ -923,7 +920,7 @@
       .kpi-sm-row {
         flex-wrap: wrap;
       }
-      
+
       .kpi-sm {
         flex: 1 1 calc(50% - 8px);
       }
@@ -1352,7 +1349,7 @@
         '</div></div>';
       eid('kpi-of').innerHTML =
         '<div class="kl">Cabezas Ofrecidas</div>' +
-        '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div><span class="chip cbl" style="padding:2px 8px; font-size:10px; line-height: 1.1;">' + NN(d.cabPublicadas || 0) + ' siguen<br>Publicadas/Ofrec.</span></div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
+        '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div><span class="chip cbl" style="padding:2px 8px; font-size:10px;">' + NN(d.cabPublicadas || 0) + ' siguen Publicadas/Ofrec.</span></div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
         '<div class="kmeta">' + (d.trop || 0) + ' Tropas &middot; ' + (d.socOf || 0) + ' Sociedades &middot; <span style="color:' + getCccColor(d.ccc || '0%') + '; font-weight:700;">' + (d.ccc || '0%') + ' CCC</span> &middot; <span style="font-weight:700;">' + (d.cotizadas || '0%') + ' Cotizadas</span></div>';
       eid('kpi-of').style.cursor = 'pointer';
       eid('kpi-of').onclick = function () { showDetailPanel('of', d.detOf || []); };
@@ -1592,7 +1589,6 @@
       var panel = eid('side-panel');
       var title = eid('sp-detail-title');
       var content = eid('sp-content');
-      var closeBtn = eid('sp-close-btn');
 
       var panelTitle = '';
       if (type === 'of') panelTitle = 'Detalle de Cabezas Ofrecidas';
@@ -1602,7 +1598,6 @@
 
       title.innerText = panelTitle;
       panel.classList.add('is-visible');
-      if (closeBtn) closeBtn.style.display = '';
 
       // Forzar redibujado de gráficos al cambiar el layout
       setTimeout(redrawCharts, 50);
@@ -1682,10 +1677,10 @@
       else if (type === 'operadas') list = CURRENT_DATA.rankingOperadas || [];
 
       // Filtro de roles y limpieza de usuarios inválidos
-      var acs = (CFG.acs || []).map(function(n) { return String(n).toLowerCase().trim(); });
-      var reps = (CFG.reps || []).map(function(n) { return String(n).toLowerCase().trim(); });
-      
-      list = list.filter(function(r) {
+      var acs = (CFG.acs || []).map(function (n) { return String(n).toLowerCase().trim(); });
+      var reps = (CFG.reps || []).map(function (n) { return String(n).toLowerCase().trim(); });
+
+      list = list.filter(function (r) {
         var rn = String(r.nombre || '').toLowerCase().trim();
         var isAC = acs.indexOf(rn) >= 0;
         var isRep = reps.indexOf(rn) >= 0;
@@ -2024,7 +2019,6 @@
         html2canvas: {
           scale: 2,
           useCORS: true,
-          windowWidth: 690,
           allowTaint: true,
           logging: false,
           // onclone: copiar el canvas a mano porque html2canvas no lo transfiere solo
@@ -2061,24 +2055,19 @@
 
       var wrapper = document.createElement('div');
       wrapper.style.position = 'fixed';
-      wrapper.style.left = '0';
+      wrapper.style.left = '-10000px';
       wrapper.style.top = '0';
       wrapper.style.width = PDF_WIDTH + 'px';
       wrapper.style.background = '#fff';
-      wrapper.style.zIndex = '-9999';
-      wrapper.style.opacity = '0.01';
-      wrapper.style.pointerEvents = 'none';
+      wrapper.style.zIndex = '-1';
 
       var clone = rpt.cloneNode(true);
       clone.classList.add('is-pdf');
       clone.style.width = PDF_WIDTH + 'px';
-      clone.style.maxWidth = PDF_WIDTH + 'px';
-      clone.style.overflow = 'hidden';
-      clone.style.boxSizing = 'border-box';
       clone.style.background = '#fff';
 
       var chartsRow = clone.querySelector('.charts-row');
-      if (chartsRow) chartsRow.style.gridTemplateColumns = '1.2fr 1fr';
+      if (chartsRow) chartsRow.style.gridTemplateColumns = '1.2fr 1fr'; // keep side by side
       var box = clone.querySelector('#chartBox') || clone.querySelector('.chart-box');
       if (box) box.style.height = PDF_CHART_H + 'px';
       var boxOper = clone.querySelector('#chartOperBox');
@@ -2086,13 +2075,19 @@
       var smKpis = clone.querySelector('#sm-kpis');
       if (smKpis) smKpis.style.gap = '4px';
 
-      // Limpiar tamaños inline de Chart.js para que las grillas css puedan contraer los canvas sin explotar
+      // Canvas elements are blank after cloneNode — replace each with a static img snapshot
+      var liveCanvases = rpt.querySelectorAll('canvas');
       var cloneCanvases = clone.querySelectorAll('canvas');
-      for (var ci = 0; ci < cloneCanvases.length; ci++) {
-        cloneCanvases[ci].style.width = '100%';
-        cloneCanvases[ci].style.height = '100%';
-        cloneCanvases[ci].removeAttribute('width');
-        cloneCanvases[ci].removeAttribute('height');
+      for (var ci = 0; ci < liveCanvases.length; ci++) {
+        var lc = liveCanvases[ci];
+        var cc = cloneCanvases[ci];
+        if (!cc) continue;
+        var img = document.createElement('img');
+        img.src = lc.toDataURL('image/png');
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.display = 'block';
+        cc.parentNode.replaceChild(img, cc);
       }
 
       wrapper.appendChild(clone);
@@ -2245,23 +2240,39 @@
                   setTimeout(function () {
 
                     var pdfName = 'Reporte_' + nombre.replace(/\s+/g, '_') + '_S' + week + '.pdf';
-                    var pdfWrapper = buildPdfReportClone();
-                    if (!pdfWrapper) {
-                      noEnviados.push(nombre + ' — error clona pdf'); procesarSiguiente(); return;
-                    }
 
-                    var content = pdfWrapper.firstChild;
-                    var hPx = content.scrollHeight || content.offsetHeight;
-                    var hMm = (hPx * 0.264583) + 10;
+                    // Aplicar altura reducida al chart-box directamente (DOM inline)
+                    prepararParaPDF();
 
+                    // rAF1: layout aplicado
                     requestAnimationFrame(function () {
-                      html2pdf()
-                        .set(getPdfOptions(pdfName, hMm))
-                        .from(content)
-                        .outputPdf('blob')
-                        .then(function (pdfBlob) {
-                          cleanupPdfReportClone(pdfWrapper);
-                          slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
+                      // Redibujar canvas al nuevo tamaño
+                      if (LAST_CHART_SERIES)
+                        drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
+                      if (LAST_OPER_SERIES)
+                        drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
+
+                      // rAF2: canvas pintado, capturar
+                      requestAnimationFrame(function () {
+                        var rptNode = eid('rpt');
+                        var hPx = rptNode.scrollHeight || rptNode.offsetHeight;
+                        var hMm = (hPx * 0.264583) + 10;
+                        html2pdf()
+                          .set(getPdfOptions(pdfName, hMm))
+                          .from(rptNode)
+                          .outputPdf('blob')
+                          .then(function (pdfBlob) {
+
+                            // Restaurar chart-box y redibujar normal
+                            restaurarDespuesDePDF();
+                            requestAnimationFrame(function () {
+                              if (LAST_CHART_SERIES)
+                                drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
+                              if (LAST_OPER_SERIES)
+                                drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
+                            });
+
+                            slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
 
                             var reader = new FileReader();
                             reader.onloadend = function () {
@@ -2292,12 +2303,13 @@
                                 .sendEmailWithPDF(nombre, email, cc, folderId, base64, pdfName, finalBody);
                             };
                             reader.readAsDataURL(pdfBlob);
-                        })
-                        .catch(function (e) {
-                          cleanupPdfReportClone(pdfWrapper);
-                          noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
-                          procesarSiguiente();
-                        });
+                          })
+                          .catch(function (e) {
+                            restaurarDespuesDePDF();
+                            noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
+                            procesarSiguiente();
+                          });
+                      });
                     });
 
                   }, 600);
@@ -2317,6 +2329,12 @@
     }
 
   </script>
+</body>
+
+</html>rocesarSiguiente();
+}
+
+</script>
 </body>
 
 </html>

@@ -19,13 +19,7 @@ function parseSheetDate(val) {
     return new Date((val - 25569) * 86400000 + 43200000); // UTC noon
   }
   if (typeof val === 'string') {
-    const s = val.trim();
-    // Parsear DD/MM/YYYY o DD-MM-YYYY
-    const ddmmyyyy = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/.exec(s);
-    if (ddmmyyyy) {
-      return new Date(Date.UTC(Number(ddmmyyyy[3]), Number(ddmmyyyy[2]) - 1, Number(ddmmyyyy[1]), 12));
-    }
-    const d = new Date(s);
+    const d = new Date(val);
     return isNaN(d.getTime()) ? null : d;
   }
   return null;
@@ -35,8 +29,8 @@ function parseSheetDate(val) {
 function toDateStr(val) {
   const d = parseSheetDate(val);
   if (!d) return '';
-  const y  = d.getUTCFullYear();
-  const m  = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${y}${m}${dd}`;
 }
@@ -45,8 +39,8 @@ function toDateStr(val) {
 function toFmt(val) {
   const d = parseSheetDate(val);
   if (!d) return '';
-  const y  = d.getUTCFullYear();
-  const m  = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${dd}/${m}/${y}`;
 }
@@ -61,8 +55,8 @@ function toDayIdx(val) {
 // Formatea Date como yyyyMMdd en UTC (para cómputo de rangos en getReport)
 function fmtDateUTC(d) {
   if (!(d instanceof Date) || isNaN(d.getTime())) return '';
-  const y  = d.getUTCFullYear();
-  const m  = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${y}${m}${dd}`;
 }
@@ -101,7 +95,7 @@ async function getConfig() {
 
   aux.forEach((row, idx) => {
     const nombre = String(g(row, 14) || '').trim();
-    const mail   = String(g(row, 20) || '').trim().toLowerCase();
+    const mail = String(g(row, 20) || '').trim().toLowerCase();
 
     if (nombre && mail) {
       acMap[nombre] = mail;
@@ -173,7 +167,7 @@ async function loadData() {
     repComp: bMap['repre_comprador'] ?? bMap['repre comprador'] ?? bMap['repre_comp'] ?? 21,
   };
   (baseRaw || []).slice(1).forEach(row => {
-    const ac      = norm(g(row, idxB.ac));
+    const ac = norm(g(row, idxB.ac));
     const repVend = norm(g(row, idxB.repVend));
     const repComp = norm(g(row, idxB.repComp));
     if (!ac && !repVend && !repComp) return;
@@ -181,9 +175,9 @@ async function loadData() {
     const est = String(g(row, idxB.est) || '').trim().toUpperCase();
     let conc = false, pub = false, ofr = false, noConc = false;
     const cotizo = Number(g(row, idxB.cot)) === 1 ? 1 : 0;
-    if      (est === 'CONCRETADA')                            { conc  = true; }
-    else if (est === 'PUBLICADO')                             { pub   = true; }
-    else if (est === 'OFRECIMIENTOS')                         { ofr   = true; }
+    if (est === 'CONCRETADA') { conc = true; }
+    else if (est === 'PUBLICADO') { pub = true; }
+    else if (est === 'OFRECIMIENTOS') { ofr = true; }
     else if (est === 'NO CONCRETADA' || est === 'NO CONCRETADAS') { noConc = true; }
     else return;
     base.push([
@@ -193,8 +187,8 @@ async function loadData() {
       g(row, idxB.soc) || '',       // 3 soc
       Number(g(row, idxB.cab)) || 0,// 4 cab
       conc ? 1 : 0,                 // 5 conc
-      pub  ? 1 : 0,                 // 6 pub
-      ofr  ? 1 : 0,                 // 7 ofr
+      pub ? 1 : 0,                 // 6 pub
+      ofr ? 1 : 0,                 // 7 ofr
       noConc ? 1 : 0,               // 8 noConc
       cotizo,                       // 9 cotizo
       String(g(row, idxB.id) || ''),// 10 id (col A)
@@ -236,10 +230,10 @@ async function loadData() {
     if (!aV && !aC && !rV && !rC) return;
     const f = toDateStr(g(row, idxO.f)); if (!f) return;
     const cargAcRaw = String(g(row, idxO.cargAc) || '').trim();
-    const cargF     = g(row, idxO.cargF) ? toDateStr(g(row, idxO.cargF)) : '';
+    const cargF = g(row, idxO.cargF) ? toDateStr(g(row, idxO.cargF)) : '';
     ops.push([
       aV, aC, f, toDayIdx(g(row, idxO.f)),
-      Number(g(row, idxO.qTot))  || 0,    // 4 Q total
+      Number(g(row, idxO.qTot)) || 0,    // 4 Q total
       g(row, idxO.socV) || '',             // 5 socV
       g(row, idxO.socC) || '',             // 6 socC
       toFmt(g(row, idxO.f)),               // 7 fmtFecha
@@ -263,7 +257,7 @@ async function loadData() {
   const coms = [];
   comsRaw.slice(1).forEach(row => {
     const mail = String(g(row, 2) || '').trim().toLowerCase(); if (!mail) return;
-    const f    = toDateStr(g(row, 3)); if (!f) return;
+    const f = toDateStr(g(row, 3)); if (!f) return;
     coms.push([
       mail, f, toDayIdx(g(row, 3)),
       g(row, 1) || '',    // 3 soc
@@ -275,21 +269,22 @@ async function loadData() {
   });
 
   // ── AGENDA CRM ──
-  // A(0)=ID Lead, B(1)=ID Lead (Usado), C(2)=Título Lead, D(3)=Agendado por, E(4)=Fecha Agendado, F(5)=Comentario/Detalle
+  // A(0)=ID Lead, B(1)=Titulo Lead (El usuario pidió esto como ID Lead), C(2)=Agendado por, D(3)=Fecha Agendado
   const agendas = [];
   agendasRaw.slice(1).forEach(row => {
-    const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return; // Col D
-    const originalDate = g(row, 4); // Col E (Data cruda como Number o String)
-    const f    = toDateStr(originalDate); if (!f) return;
-    
+    const mail = String(g(row, 2) || '').trim().toLowerCase(); if (!mail) return;
+    const originalDate = String(g(row, 3) || '').trim(); // Columna D
+    const f = toDateStr(originalDate); if (!f) return;
+    const fStr = f.length === 8 ? `${f.slice(6, 8)}/${f.slice(4, 6)}/${f.slice(0, 4)}` : originalDate;
+
     agendas.push([
-      mail, 
-      f, 
+      mail,
+      f,
       toDayIdx(originalDate),
-      g(row, 2) || '',         // 3 soc (Título Lead, Col C)
-      g(row, 5) || '',         // 4 comentario (Columna F)
+      g(row, 1) || '',         // 3 soc (Titulo Lead, Col B)
+      fStr,                    // 4 comentario (fecha legible DD/MM/YYYY)
       'Agenda',                // 5 tipo
-      String(g(row, 1) || ''), // 6 idLead (ID Lead, Col B)
+      String(g(row, 1) || ''), // 6 idLead (Titulo Lead, Col B)
     ]);
   });
 
@@ -312,8 +307,8 @@ async function loadData() {
   const auxLeads = [];
   auxLeadsRaw.slice(1).forEach(row => {
     const mail = String(g(row, 1) || '').trim().toLowerCase(); if (!mail) return;
-    const est  = String(g(row, 4) || '').trim().toUpperCase();
-    const f    = toDateStr(g(row, 2));
+    const est = String(g(row, 4) || '').trim().toUpperCase();
+    const f = toDateStr(g(row, 2));
     auxLeads.push([
       mail,                                   // 0 mail
       f,                                      // 1 fechaAsig
@@ -341,7 +336,7 @@ async function loadData() {
   const sacs = [];
   sacsRaw.slice(1).forEach(row => {
     const ac = norm(g(row, 28)); if (!ac) return;
-    const f  = toDateStr(g(row, 19)); if (!f) return;
+    const f = toDateStr(g(row, 19)); if (!f) return;
     sacs.push([
       ac,                         // 0 acNorm
       f,                          // 1 fecha
@@ -358,7 +353,7 @@ async function loadData() {
   const remates = [];
   rematesRaw.slice(1).forEach(row => {
     const ac = norm(g(row, 2)); if (!ac) return;
-    const f  = toDateStr(g(row, 1)); if (!f) return;
+    const f = toDateStr(g(row, 1)); if (!f) return;
     remates.push([ac, f, String(g(row, 3) || Math.random())]);
   });
 
@@ -369,11 +364,9 @@ async function loadData() {
     bcfull.push([cuit, String(g(row, 3) || ''), String(g(row, 4) || '')]);
   });
 
-  const data = { 
-    base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull
-  };
+  const data = { base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull };
   cache.set('data', data, cache.TTL.DATA);
-  console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} agendas=${agendas.length} completado.`);
+  console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} completado.`);
   return data;
 }
 
@@ -395,12 +388,12 @@ async function scheduledWarmup() {
 
 // ─── debugCacheStatus ─────────────────────────────────────────────────────────
 function debugCacheStatus(ac, startTs, endTs) {
-  const cfgCached  = cache.get('config');
+  const cfgCached = cache.get('config');
   const dataCached = cache.get('data');
   let rKey = '', rHit = false;
   if (ac && startTs && endTs && cfgCached) {
     const acMail = cfgCached.acMap[ac] || '';
-    const ver    = getReportCacheVersion();
+    const ver = getReportCacheVersion();
     if (acMail) {
       rKey = `R12_${ver}_${acMail.replace(/[@.]/g, '_')}_${startTs}_${endTs}`;
       rHit = !!cache.get(rKey);
@@ -408,8 +401,8 @@ function debugCacheStatus(ac, startTs, endTs) {
   }
   return {
     reportCacheVersion: getReportCacheVersion(),
-    hasCFG8:      !!cfgCached,
-    hasDATA10:    !!dataCached,
+    hasCFG8: !!cfgCached,
+    hasDATA10: !!dataCached,
     data10Chunks: '1',
     ac: ac || '',
     acMail: cfgCached ? (cfgCached.acMap[ac] || '') : '',
@@ -421,8 +414,8 @@ function debugCacheStatus(ac, startTs, endTs) {
 // ─── refreshCacheAndWarmup ───────────────────────────────────────────────────
 async function refreshCacheAndWarmup(ac, startTs, endTs) {
   const clearMsg = clearCache();
-  const warm     = await warmup();
-  const status   = debugCacheStatus(ac, startTs, endTs);
+  const warm = await warmup();
+  const status = debugCacheStatus(ac, startTs, endTs);
   return { ok: true, clear: clearMsg, warmup: warm, status };
 }
 
@@ -437,19 +430,14 @@ async function getReport(ac, startTs, endTs, opts) {
   const acMail = cfg.acMap[ac];
   if (!acMail) return { error: 'AC no encontrado: ' + ac };
 
-  const mailAliases = {
-    'emiliano.sanchez@decampoacampo.com': ['esanchez@decampoacampo.com']
-  };
-  const isTargetMail = (m) => m === acMail || !!(mailAliases[acMail] && mailAliases[acMail].includes(m));
-
   const acN = norm(ac);
-  const ver  = getReportCacheVersion();
+  const ver = getReportCacheVersion();
   const rMode = skipPrevLookup ? '_raw' : '';
-  const rKey  = `R12_${ver}_${acMail.replace(/[@.]/g, '_')}_${startTs}_${endTs}${rMode}`;
+  const rKey = `R12_${ver}_${acMail.replace(/[@.]/g, '_')}_${startTs}_${endTs}${rMode}`;
 
   const ssgSanitized2 = acMail.replace(/[^a-zA-Z0-9_]/g, '_');
-  const ssgStoreKey2  = `SSGN_${ssgSanitized2}_${startTs}`;
-  const ssgPrevKey2   = `SSGN_${ssgSanitized2}_${startTs - 604800000}`;
+  const ssgStoreKey2 = `SSGN_${ssgSanitized2}_${startTs}`;
+  const ssgPrevKey2 = `SSGN_${ssgSanitized2}_${startTs - 604800000}`;
 
   // ── Cache hit ──
   const hit = cache.get(rKey);
@@ -465,10 +453,10 @@ async function getReport(ac, startTs, endTs, opts) {
   // ── Rangos de fechas (UTC) ──
   const d0 = new Date(startTs);
   const d1 = new Date(endTs);
-  const ini   = fmtDateUTC(d0);
-  const fin   = fmtDateUTC(d1);
-  const ini_  = fmtDateUTC(new Date(startTs - 7 * 86400000));
-  const fin_  = fmtDateUTC(new Date(endTs   - 7 * 86400000));
+  const ini = fmtDateUTC(d0);
+  const fin = fmtDateUTC(d1);
+  const ini_ = fmtDateUTC(new Date(startTs - 7 * 86400000));
+  const fin_ = fmtDateUTC(new Date(endTs - 7 * 86400000));
 
   // Inicio de mes de d1 (UTC noon)
   const m0 = new Date(Date.UTC(d1.getUTCFullYear(), d1.getUTCMonth(), 1, 12));
@@ -476,9 +464,9 @@ async function getReport(ac, startTs, endTs, opts) {
 
   // Mes anterior (mismo corte de día)
   const prevMonthStart = new Date(Date.UTC(m0.getUTCFullYear(), m0.getUTCMonth() - 1, 1, 12));
-  const prevMonthEnd   = new Date(Date.UTC(m0.getUTCFullYear(), m0.getUTCMonth(), 0, 12)); // día 0 = último del mes anterior
-  const prevCutDay     = Math.min(d1.getUTCDate(), prevMonthEnd.getUTCDate());
-  const prevMonthCut   = new Date(Date.UTC(prevMonthStart.getUTCFullYear(), prevMonthStart.getUTCMonth(), prevCutDay, 12));
+  const prevMonthEnd = new Date(Date.UTC(m0.getUTCFullYear(), m0.getUTCMonth(), 0, 12)); // día 0 = último del mes anterior
+  const prevCutDay = Math.min(d1.getUTCDate(), prevMonthEnd.getUTCDate());
+  const prevMonthCut = new Date(Date.UTC(prevMonthStart.getUTCFullYear(), prevMonthStart.getUTCMonth(), prevCutDay, 12));
   const iniMPrev = fmtDateUTC(prevMonthStart);
   const finMPrev = fmtDateUTC(prevMonthCut);
 
@@ -491,8 +479,8 @@ async function getReport(ac, startTs, endTs, opts) {
 
   const semMes = ult4Sem.map(s => ({
     label: 'S' + s.n,
-    ini:   fmtDateUTC(new Date(s.s)),
-    fin:   fmtDateUTC(new Date(s.e)),
+    ini: fmtDateUTC(new Date(s.s)),
+    fin: fmtDateUTC(new Date(s.e)),
   }));
 
   // Última semana del mes anterior
@@ -500,7 +488,7 @@ async function getReport(ac, startTs, endTs, opts) {
     if (!s || !s.s || !s.e) return false;
     const we = new Date(s.e);
     return we.getUTCFullYear() === prevMonthStart.getUTCFullYear() &&
-           we.getUTCMonth()    === prevMonthStart.getUTCMonth();
+      we.getUTCMonth() === prevMonthStart.getUTCMonth();
   }).sort((a, b) => a.e - b.e);
   const ultSemPrevMes = semPrevMes.length ? semPrevMes[semPrevMes.length - 1] : null;
   let semPrevIni = '', semPrevFin = '';
@@ -509,24 +497,24 @@ async function getReport(ac, startTs, endTs, opts) {
     semPrevFin = fmtDateUTC(new Date(ultSemPrevMes.e));
   }
 
-  const inS     = f => f >= ini    && f <= fin;
-  const inA     = f => f >= ini_   && f <= fin_;
-  const inM     = f => f >= iniM   && f <= fin;
+  const inS = f => f >= ini && f <= fin;
+  const inA = f => f >= ini_ && f <= fin_;
+  const inM = f => f >= iniM && f <= fin;
   const inMPrev = f => f >= iniMPrev && f <= finMPrev;
 
   // ── Resultado ──
   const r = {
     cab: 0, trop: 0, pCab: 0, pTrop: 0, cccNum: 0, cccDen: 0, cabPublicadas: 0,
     cabCompra: 0, pCabCompra: 0, tropCompra: 0, socCompra: 0,
-    dT: [0,0,0,0,0,0,0], dCompras: [0,0,0,0,0,0,0],
+    dT: [0, 0, 0, 0, 0, 0, 0], dCompras: [0, 0, 0, 0, 0, 0, 0],
     cabC: 0, cabCWeekTrop: 0, cabCSocCount: 0, pCabC: 0,
     cabV: 0, cabConc: 0, trConc: 0, pConc: 0,
     cabOperMtd: 0, pCabOperMtd: 0, cabVOperMtd: 0, cabCOperMtd: 0,
-    carg: 0, cargProp: 0, cargAjen: 0, dCargas: [0,0,0,0,0,0,0],
-    com: 0, age: 0, tSG: 0, pTSG: 0, dGestion: [0,0,0,0,0,0,0],
+    carg: 0, cargProp: 0, cargAjen: 0, dCargas: [0, 0, 0, 0, 0, 0, 0],
+    com: 0, age: 0, tSG: 0, pTSG: 0, dGestion: [0, 0, 0, 0, 0, 0, 0],
     nuevas: 0, pNuevas: 0, nuevasFuentes: {}, socSinGestNum: 0, pSocSinGestNum: 0, socSinGestAsigSem: 0,
     sacs: [], sacsTable: [], pSac: 0, sacAprob: 0, sacRech: 0, sacPend: 0,
-    rem: 0, pRem: 0, dSacs: [0,0,0,0,0,0,0],
+    rem: 0, pRem: 0, dSacs: [0, 0, 0, 0, 0, 0, 0],
     top5: [], ssgTop5: [], actSemanal: [],
     detOf: [], detC: [], detCarg: [],
     operSemMesLabels: [], operSemMesVals: [], operSemMesDets: [], prevSemOperBase: 0,
@@ -537,14 +525,14 @@ async function getReport(ac, startTs, endTs, opts) {
 
   // Detectar si hay datos CRM para este AC
   let hasCrmData = D.auxLeads.some(row => row[0] === acMail) ||
-                   D.coms.some(row => row[0] === acMail)     ||
-                   D.agendas.some(row => row[0] === acMail)  ||
-                   D.leads.some(row => row[0] === acMail);
+    D.coms.some(row => row[0] === acMail) ||
+    D.agendas.some(row => row[0] === acMail) ||
+    D.leads.some(row => row[0] === acMail);
   r.hideCRM = !hasCrmData;
 
   r.operSemMesLabels = semMes.map(s => s.label);
-  r.operSemMesVals   = semMes.map(() => 0);
-  r.operSemMesDets   = semMes.map(() => []);
+  r.operSemMesVals = semMes.map(() => 0);
+  r.operSemMesDets = semMes.map(() => []);
 
   // ── Mapa CUIT → Kt, Kv ──
   const cuitKtKvMap = {};
@@ -575,7 +563,7 @@ async function getReport(ac, startTs, endTs, opts) {
     if (cuitStr.toLowerCase().includes('e')) {
       const parsed = parseFloat(cuitStr);
       if (!isNaN(parsed)) {
-        const truncStr = String(Math.trunc(parsed)); 
+        const truncStr = String(Math.trunc(parsed));
         ktKv = fuzzyCuitMap[truncStr.slice(0, 10)];
       }
     }
@@ -591,14 +579,14 @@ async function getReport(ac, startTs, endTs, opts) {
     const row = D.base[i];
     if (row[0] !== acN && row[14] !== acN && row[15] !== acN) continue;
     const baseId = String(row[10] || '').trim();
-    const bKey   = baseId ? baseId : `b_idx_${i}`;
+    const bKey = baseId ? baseId : `b_idx_${i}`;
     if (seenBaseId[bKey]) continue;
     seenBaseId[bKey] = true;
 
     const f = row[1];
     if (inS(f)) {
-      r.cab    += row[4]; r.trop++;
-      if (row[5]) cabConcBase  += row[4];
+      r.cab += row[4]; r.trop++;
+      if (row[5]) cabConcBase += row[4];
       if (row[8]) cabNoConcBase += row[4];
       if (row[6] || row[7]) r.cabPublicadas += row[4];
       if ((row[5] || row[8]) && row[9]) cabCotizadasCcc += row[4];
@@ -607,21 +595,21 @@ async function getReport(ac, startTs, endTs, opts) {
 
       const cuitOf = String(row[11] || '').trim();
       const dataOf = getKtKv(cuitOf);
-      const fStr   = String(f || '');
-      const fFmt   = fStr.length === 8
-        ? `${fStr.slice(6,8)}/${fStr.slice(4,6)}/${fStr.slice(0,4)}`
+      const fStr = String(f || '');
+      const fFmt = fStr.length === 8
+        ? `${fStr.slice(6, 8)}/${fStr.slice(4, 6)}/${fStr.slice(0, 4)}`
         : fStr;
 
       r.detOf.push({
-        id:    row[10] || '',
+        id: row[10] || '',
         fecha: row[13] ? String(row[13]) : fFmt,
-        soc:   row[3]  || '-',
-        q:     row[4]  || 0,
-        un:    row[12] || '-',
-        kt:    dataOf.kt,
-        kv:    dataOf.kv,
-        est:   row[5] ? 'C' : (row[8] ? 'NC' : (row[6] ? 'P' : (row[7] ? 'O' : '-'))),
-        cot:   row[9] || 0,
+        soc: row[3] || '-',
+        q: row[4] || 0,
+        un: row[12] || '-',
+        kt: dataOf.kt,
+        kv: dataOf.kv,
+        est: row[5] ? 'C' : (row[8] ? 'NC' : (row[6] ? 'P' : (row[7] ? 'O' : '-'))),
+        cot: row[9] || 0,
       });
     }
     if (inA(f)) { r.pCab += row[4]; r.pTrop++; }
@@ -635,14 +623,14 @@ async function getReport(ac, startTs, endTs, opts) {
   const seenPrevSem = {}, seenCWeek = {}, seenOpsId = {};
 
   for (let i = 0; i < D.ops.length; i++) {
-    const row   = D.ops[i];
-    const isV   = (row[0] === acN) || (row[18] === acN);
-    const isC   = (row[1] === acN) || (row[19] === acN);
+    const row = D.ops[i];
+    const isV = (row[0] === acN) || (row[18] === acN);
+    const isC = (row[1] === acN) || (row[19] === acN);
     const isCargForAc = row[11] === acN || row[16] === acMail;
 
     if (!isV && !isC && !isCargForAc) continue;
     const opIdStr = String(row[8] || '').trim();
-    const oKey    = opIdStr ? opIdStr : `o_idx_${i}`;
+    const oKey = opIdStr ? opIdStr : `o_idx_${i}`;
     if (seenOpsId[oKey]) continue;
     seenOpsId[oKey] = true;
 
@@ -652,25 +640,25 @@ async function getReport(ac, startTs, endTs, opts) {
       if (isV) r.cargProp++; else r.cargAjen++;
       if (row[13] >= 0) r.dCargas[row[13]]++;
 
-      const fCS  = String(row[12] || '');
+      const fCS = String(row[12] || '');
       const fCFmt = fCS.length === 8
-        ? `${fCS.slice(6,8)}/${fCS.slice(4,6)}/${fCS.slice(0,4)}`
+        ? `${fCS.slice(6, 8)}/${fCS.slice(4, 6)}/${fCS.slice(0, 4)}`
         : fCS;
       const cuitLookupCarg = String(row[14] || '').trim();
       const dataCarg = getKtKv(cuitLookupCarg);
       r.detCarg.push({
-        id:    String(row[8] || ''),
+        id: String(row[8] || ''),
         fecha: fCFmt,
-        soc:   String(row[5] || '-') + (isV ? ' (Propia)' : ' (Ajena)'),
-        q:     Number(row[4]) || 0,
-        un:    String(row[9] || '-'),
-        kt:    dataCarg.kt,
-        kv:    dataCarg.kv,
+        soc: String(row[5] || '-') + (isV ? ' (Propia)' : ' (Ajena)'),
+        q: Number(row[4]) || 0,
+        un: String(row[9] || '-'),
+        kt: dataCarg.kt,
+        kv: dataCarg.kv,
       });
     }
 
     if (!isV && !isC) continue;
-    const f  = row[2];
+    const f = row[2];
     const id = row[8];
     const opKey = id ? String(id) : `idx_${i}`;
 
@@ -696,10 +684,10 @@ async function getReport(ac, startTs, endTs, opts) {
       // El Kt/Kv mostrado en "Top Negocios" corresponde al cliente del AC.
       // Si el AC es Vendedor (isV), mostramos el Kt/Kv del Vendedor (cuitV).
       // Si el AC es Comprador (isC), mostramos el Kt/Kv del Comprador (cuitC).
-      const cuitLookup = isV 
+      const cuitLookup = isV
         ? String(row[14] || '').trim() // cuitV
         : String(row[15] || '').trim(); // cuitC
-      
+
       const ktKv = getKtKv(cuitLookup);
       const tieneCargar = isCargForAc ? 'Sí' : '';
       const acLado = isV && isC ? 'vend/comp' : (isV ? 'vend' : 'comp');
@@ -717,8 +705,9 @@ async function getReport(ac, startTs, endTs, opts) {
         seenSemMes[w][opKey] = 1;
         r.operSemMesVals[w] += row[4];
         const cuitLkp = String(row[14] || '').trim();
-        const ktkvW   = getKtKv(cuitLkp);
-        r.operSemMesDets[w].push({ id: row[8], un: row[9], soc: String(row[5] || row[6] || '-'), fecha: row[7], q: row[4], kt: ktkvW.kt, kv: ktkvW.kv, lado: acLado });
+        const ktkvW = getKtKv(cuitLkp);
+        const l = isV && isC ? 'vend/comp' : (isV ? 'vend' : 'comp');
+        r.operSemMesDets[w].push({ id: row[8], un: row[9], soc: String(row[5] || row[6] || '-'), fecha: row[7], q: row[4], kt: ktkvW.kt, kv: ktkvW.kv, lado: l });
       }
       break;
     }
@@ -732,7 +721,7 @@ async function getReport(ac, startTs, endTs, opts) {
   allOps.sort((a, b) => b.q - a.q);
   r.top5 = allOps.slice(0, 5);
 
-  r.ccc       = (cabConcBase + cabNoConcBase) > 0
+  r.ccc = (cabConcBase + cabNoConcBase) > 0
     ? Math.round(cabConcBase / (cabConcBase + cabNoConcBase) * 100) + '%'
     : '0%';
   r.cotizadas = (cabConcBase + cabNoConcBase) > 0
@@ -740,7 +729,7 @@ async function getReport(ac, startTs, endTs, opts) {
     : '0%';
 
   // ── CRM (Comentarios + Agenda) ──
-  const socGest = {}, pSocGest = {}, gestDia = [{},{},{},{},{},{},{}];
+  const socGest = {}, pSocGest = {}, gestDia = [{}, {}, {}, {}, {}, {}, {}];
   const comSocGest = {}, ageSocGest = {};
   const crmGestiones = {};
 
@@ -754,8 +743,8 @@ async function getReport(ac, startTs, endTs, opts) {
 
   for (let i = 0; i < D.coms.length; i++) {
     const row = D.coms[i];
-    if (!isTargetMail(row[0])) continue;
-    const f    = row[1];
+    if (row[0] !== acMail) continue;
+    const f = row[1];
     const gKey = getLeadKey(row[7], row[3], 'com:' + i);
     if (inS(f)) {
       if (row[4] && gKey) comSocGest[gKey] = 1;
@@ -770,8 +759,8 @@ async function getReport(ac, startTs, endTs, opts) {
   }
   for (let i = 0; i < D.agendas.length; i++) {
     const row = D.agendas[i];
-    if (!isTargetMail(row[0])) continue;
-    const f    = row[1];
+    if (row[0] !== acMail) continue;
+    const f = row[1];
     const gKey = getLeadKey(row[6], row[3], 'age:' + i);
     if (inS(f)) {
       if (gKey) ageSocGest[gKey] = 1;
@@ -784,28 +773,28 @@ async function getReport(ac, startTs, endTs, opts) {
     }
     if (inA(f) && gKey) pSocGest[gKey] = 1;
   }
-  r.com  = Object.keys(comSocGest).length;
-  r.age  = Object.keys(ageSocGest).length;
-  r.tSG  = Object.keys(socGest).length;
+  r.com = Object.keys(comSocGest).length;
+  r.age = Object.keys(ageSocGest).length;
+  r.tSG = Object.keys(socGest).length;
   r.pTSG = Object.keys(pSocGest).length;
   for (let d = 0; d < 7; d++) r.dGestion[d] = Object.keys(gestDia[d]).length;
 
   // ── AUX LEADS ──
-  const ssgByLead    = {};
-  const asigSemSoc   = {}, asigPrevSoc = {}, asigSemFuenteCount = {};
+  const ssgByLead = {};
+  const asigSemSoc = {}, asigPrevSoc = {}, asigSemFuenteCount = {};
   const seenAsigSemFuenteSoc = {};
   const socSinGestAsigSemSet = {}, socSinGestSet = {}, prevSocSinGestSet = {};
-  const asigSemData  = {}, auxByLead = {};
+  const asigSemData = {}, auxByLead = {};
 
   function saveSsgRow(socKey, rowData) {
     if (!socKey || !rowData) return;
     const prev = ssgByLead[socKey];
     if (!prev) { ssgByLead[socKey] = rowData; return; }
     const prevSem = Number(prev.asigSem) || 0;
-    const rowSem  = Number(rowData.asigSem) || 0;
+    const rowSem = Number(rowData.asigSem) || 0;
     if (rowSem !== prevSem) { if (rowSem > prevSem) ssgByLead[socKey] = rowData; return; }
     const prevW = Number(prev.w) || 0;
-    const rowW  = Number(rowData.w) || 0;
+    const rowW = Number(rowData.w) || 0;
     if (rowW !== prevW) { if (rowW < prevW) ssgByLead[socKey] = rowData; return; }
     const prevFa = prev.fa || '', rowFa = rowData.fa || '';
     if (rowFa > prevFa) ssgByLead[socKey] = rowData;
@@ -813,7 +802,7 @@ async function getReport(ac, startTs, endTs, opts) {
 
   for (let i = 0; i < D.auxLeads.length; i++) {
     const row = D.auxLeads[i];
-    if (!isTargetMail(row[0])) continue;
+    if (row[0] !== acMail) continue;
 
     const socKey = getLeadKey(row[16], row[6], 'aux:' + i);
 
@@ -822,7 +811,7 @@ async function getReport(ac, startTs, endTs, opts) {
       if (!asigSemData[socKey] || row[1] > (asigSemData[socKey].fa || ''))
         asigSemData[socKey] = { kt: row[4], kv: row[5], soc: row[6], fa: row[1], sg: row[10], ug: row[11], w: row[8], fuente: row[13], asigSem: 1 };
       const fuente = String(row[13] || '').trim().toUpperCase() || 'OTROS';
-      const sfKey  = fuente + '|' + socKey;
+      const sfKey = fuente + '|' + socKey;
       if (!seenAsigSemFuenteSoc[sfKey]) {
         seenAsigSemFuenteSoc[sfKey] = 1;
         asigSemFuenteCount[fuente] = (asigSemFuenteCount[fuente] || 0) + 1;
@@ -837,8 +826,8 @@ async function getReport(ac, startTs, endTs, opts) {
     }
     if (row[3] && row[1] && row[1] <= fin_) prevSocSinGestSet[socKey] = 1;
 
-    if (socKey) {
-      if (!auxByLead[socKey] || (row[1] && row[1] > (auxByLead[socKey].fa || '')))
+    if (!row[3] && socKey && row[1] && inS(row[1])) {
+      if (!auxByLead[socKey] || row[1] > (auxByLead[socKey].fa || ''))
         auxByLead[socKey] = { kt: row[4], kv: row[5], fa: row[1], fuente: row[13], estado: row[15], cm: row[14], tipo: 'Asignación', soc: row[6], idLead: row[16] };
     }
   }
@@ -871,9 +860,9 @@ async function getReport(ac, startTs, endTs, opts) {
     if (!b.fa) return -1;
     return a.fa < b.fa ? 1 : a.fa > b.fa ? -1 : 0;
   });
-  r.ssgTop5         = ssgAll.slice(0, 5);
-  r.socSinGestNum   = Object.keys(socSinGestSet).length;
-  r.pSocSinGestNum  = Object.keys(prevSocSinGestSet).length;
+  r.ssgTop5 = ssgAll.slice(0, 5);
+  r.socSinGestNum = Object.keys(socSinGestSet).length;
+  r.pSocSinGestNum = Object.keys(prevSocSinGestSet).length;
   props.setProp(ssgStoreKey2, String(r.socSinGestNum));
 
   // Variación correcta: reporte de la semana anterior
@@ -896,9 +885,9 @@ async function getReport(ac, startTs, endTs, opts) {
   }
 
   r.socSinGestAvgDays = ssgDaysCount ? Math.round((ssgDaysSum / ssgDaysCount) * 10) / 10 : 0;
-  r.nuevas            = Object.keys(asigSemSoc).length;
-  r.pNuevas           = Object.keys(asigPrevSoc).length;
-  r.nuevasFuentes     = asigSemFuenteCount;
+  r.nuevas = Object.keys(asigSemSoc).length;
+  r.pNuevas = Object.keys(asigPrevSoc).length;
+  r.nuevasFuentes = asigSemFuenteCount;
   r.socSinGestAsigSem = Object.keys(socSinGestAsigSemSet).length;
 
   let tsgAsig = 0;
@@ -908,8 +897,8 @@ async function getReport(ac, startTs, endTs, opts) {
   // Top Soc. Gestionadas
   const actArr = [];
   for (const crmKey of Object.keys(crmGestiones)) {
-    const crm    = crmGestiones[crmKey];
-    const al     = auxByLead[crmKey];
+    const crm = crmGestiones[crmKey];
+    const al = auxByLead[crmKey];
     const sortFa = al ? al.fa : crm.f;
     actArr.push({ kt: al ? al.kt : '-', kv: al ? al.kv : '-', soc: crm.soc || (al ? al.soc : '-') || '-', fa: crm.f, fuente: al ? al.fuente : '-', estado: al ? al.estado : '-', cm: crm.cm, tipo: crm.tipo, _sortFa: sortFa });
   }
@@ -927,9 +916,9 @@ async function getReport(ac, startTs, endTs, opts) {
     if (inS(row[1])) {
       const estSac = String(row[4] || '').trim().toUpperCase();
       let estShow = '';
-      if      (estSac === 'APROBADO')  { estShow = 'APROBADO';  r.sacAprob++; }
-      else if (estSac === 'RECHAZADO') { estShow = 'RECHAZADO'; r.sacRech++;  }
-      else if (estSac === 'PENDIENTE') { estShow = 'PENDIENTE'; r.sacPend++;  }
+      if (estSac === 'APROBADO') { estShow = 'APROBADO'; r.sacAprob++; }
+      else if (estSac === 'RECHAZADO') { estShow = 'RECHAZADO'; r.sacRech++; }
+      else if (estSac === 'PENDIENTE') { estShow = 'PENDIENTE'; r.sacPend++; }
       r.sacs.push({ s: row[3], f: row[1], e: estShow });
       r.sacsTable.push({ soc: row[3], fecha: row[1], estado: estShow, jdSol: row[5], jdApro: row[6], un: row[7] });
       if (row[2] >= 0) r.dSacs[row[2]]++;
@@ -941,10 +930,10 @@ async function getReport(ac, startTs, endTs, opts) {
   const remIds = {}, pRemIds = {};
   for (const row of D.remates) {
     if (row[0] !== acN) continue;
-    if (inS(row[1])) remIds[row[2]]  = 1;
+    if (inS(row[1])) remIds[row[2]] = 1;
     if (inA(row[1])) pRemIds[row[2]] = 1;
   }
-  r.rem  = Object.keys(remIds).length;
+  r.rem = Object.keys(remIds).length;
   r.pRem = Object.keys(pRemIds).length;
 
   // ── RANKING GLOBAL ──
@@ -952,35 +941,35 @@ async function getReport(ac, startTs, endTs, opts) {
   const seenRnkOf = {}, seenRnkOp = {};
 
   for (let i = 0; i < D.base.length; i++) {
-    const row    = D.base[i];
+    const row = D.base[i];
     const baseId = String(row[10] || '').trim();
-    const bKey   = baseId ? baseId : `rb_idx_${i}`;
+    const bKey = baseId ? baseId : `rb_idx_${i}`;
     if (!seenRnkOf[bKey]) {
       seenRnkOf[bKey] = true;
       if (inS(row[1]) && (row[5] || row[8] || row[6] || row[7])) {
-        const q  = Number(row[4]) || 0;
-        const n  = String(row[0]  || '').trim();
+        const q = Number(row[4]) || 0;
+        const n = String(row[0] || '').trim();
         const rv = String(row[14] || '').trim();
         const rc = String(row[15] || '').trim();
-        if (n)                       rOfrec[n]  = (rOfrec[n]  || 0) + q;
-        if (rv && rv !== n)          rOfrec[rv] = (rOfrec[rv] || 0) + q;
+        if (n) rOfrec[n] = (rOfrec[n] || 0) + q;
+        if (rv && rv !== n) rOfrec[rv] = (rOfrec[rv] || 0) + q;
         if (rc && rc !== n && rc !== rv) rOfrec[rc] = (rOfrec[rc] || 0) + q;
       }
     }
   }
   for (let i = 0; i < D.ops.length; i++) {
-    const row   = D.ops[i];
-    const opId  = String(row[8] || '').trim();
-    const oKey  = opId ? opId : `ro_idx_${i}`;
+    const row = D.ops[i];
+    const opId = String(row[8] || '').trim();
+    const oKey = opId ? opId : `ro_idx_${i}`;
     if (!seenRnkOp[oKey]) {
       seenRnkOp[oKey] = true;
       if (inS(row[2])) {
         const q = Number(row[4]) || 0;
         const vNs = [];
-        const aV = String(row[0]  || '').trim(); if (aV && !vNs.includes(aV)) vNs.push(aV);
+        const aV = String(row[0] || '').trim(); if (aV && !vNs.includes(aV)) vNs.push(aV);
         const rV = String(row[18] || '').trim(); if (rV && !vNs.includes(rV)) vNs.push(rV);
         const cNs = [];
-        const aC = String(row[1]  || '').trim(); if (aC && !cNs.includes(aC)) cNs.push(aC);
+        const aC = String(row[1] || '').trim(); if (aC && !cNs.includes(aC)) cNs.push(aC);
         const rC = String(row[19] || '').trim(); if (rC && !cNs.includes(rC)) cNs.push(rC);
         const uniqueOps = [...new Set([...vNs, ...cNs])];
         uniqueOps.forEach(x => { rOper[x] = (rOper[x] || 0) + q; });
@@ -993,10 +982,7 @@ async function getReport(ac, startTs, endTs, opts) {
   }
   r.rankingOfrecidas = toRnk(rOfrec);
   r.rankingCompradas = toRnk(rComp);
-  r.rankingOperadas  = toRnk(rOper);
-
-  // DEBUG temporal para ver quién tiene agendas en la fecha actual
-  r.debugMailsConAgenda = Array.from(new Set(D.agendas.filter(a => inS(a[1])).map(a => a[0])));
+  r.rankingOperadas = toRnk(rOper);
 
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);
