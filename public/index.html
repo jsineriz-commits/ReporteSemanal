@@ -2028,14 +2028,14 @@
               var orig = document.getElementById(id);
               var cloned = clonedDoc.getElementById(id);
               if (orig && cloned) {
-                var clonedParent = cloned.parentElement;
-                var width = clonedParent ? clonedParent.offsetWidth : Math.round(orig.width / 2);
-                var height = clonedParent ? clonedParent.offsetHeight : Math.round(orig.height / 2);
-                cloned.width = Math.max(1, width * 2);
-                cloned.height = Math.max(1, height * 2);
-                cloned.style.width = width + 'px';
-                cloned.style.height = height + 'px';
-                cloned.getContext('2d').drawImage(orig, 0, 0, cloned.width, cloned.height);
+                // Usar siempre las dimensiones físicas del canvas live (dibujado a 2x)
+                var origW = orig.width, origH = orig.height;
+                if (!origW || !origH) return;
+                cloned.width = origW;
+                cloned.height = origH;
+                cloned.style.width = Math.round(origW / 2) + 'px';
+                cloned.style.height = Math.round(origH / 2) + 'px';
+                cloned.getContext('2d').drawImage(orig, 0, 0, origW, origH);
               }
             });
           }
@@ -2104,6 +2104,11 @@
 
     function exportPDF() {
       if (!eid('rpt').innerHTML) return;
+      // Detener animación para captura limpia
+      if (window._operAnimId) {
+        cancelAnimationFrame(window._operAnimId);
+        window._operAnimId = null;
+      }
       var ac = eid('selAC').value || 'Reporte', p = eid('selSem').value.split('|');
       var filename = 'Reporte_' + ac.replace(/\s+/g, '_') + '_S' + p[0] + '.pdf';
       var pdfWrapper = buildPdfReportClone();
@@ -2253,8 +2258,13 @@
                       if (LAST_OPER_SERIES)
                         drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
 
-                      // rAF2: canvas pintado, capturar
+                      // rAF2: canvas pintado — cancelar animación ANTES de capturar
                       requestAnimationFrame(function () {
+                        // Detener animación del gráfico para evitar frames corruptos en el PDF
+                        if (window._operAnimId) {
+                          cancelAnimationFrame(window._operAnimId);
+                          window._operAnimId = null;
+                        }
                         var rptNode = eid('rpt');
                         var hPx = rptNode.scrollHeight || rptNode.offsetHeight;
                         var hMm = (hPx * 0.264583) + 10;
