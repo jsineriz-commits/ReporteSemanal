@@ -360,8 +360,21 @@
 
     .sp-close {
       cursor: pointer;
-      font-size: 18px;
-      color: var(--t-muted);
+      font-size: 16px;
+      color: #bbb;
+      line-height: 1;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .sp-close:hover {
+      background: #f0f0f0;
+      color: #888;
     }
 
 
