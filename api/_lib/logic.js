@@ -577,7 +577,9 @@ async function getReport(ac, startTs, endTs, opts) {
 
   for (let i = 0; i < D.base.length; i++) {
     const row = D.base[i];
-    if (row[0] !== acN && row[14] !== acN && row[15] !== acN) continue;
+    // Solo incluir si el AC aparece como vendedor (AC_Vend o repre_vendedor).
+    // repre_comprador (row[15]) NO aplica en la BASE de ofrecidas.
+    if (row[0] !== acN && row[14] !== acN) continue;
     const baseId = String(row[10] || '').trim();
     const bKey = baseId ? baseId : `b_idx_${i}`;
     if (seenBaseId[bKey]) continue;
