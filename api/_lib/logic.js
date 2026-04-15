@@ -952,10 +952,9 @@ async function getReport(ac, startTs, endTs, opts) {
         const q = Number(row[4]) || 0;
         const n = String(row[0] || '').trim();
         const rv = String(row[14] || '').trim();
-        const rc = String(row[15] || '').trim();
+        // Solo AC_Vend y repre_vendedor cuentan en Ofrecidas — no repre_comprador
         if (n) rOfrec[n] = (rOfrec[n] || 0) + q;
         if (rv && rv !== n) rOfrec[rv] = (rOfrec[rv] || 0) + q;
-        if (rc && rc !== n && rc !== rv) rOfrec[rc] = (rOfrec[rc] || 0) + q;
       }
     }
   }
