@@ -1985,8 +1985,11 @@
     // html2canvas captura #rpt, no el body → las reglas body.pdf-mode no llegan
     // al clon. La única manera confiable es setear style inline ANTES de capturar.
 
-    var PDF_CHART_H = 80; // altura del chart-box en el PDF (px)
-    var PDF_CHART_OPER_H = 90; // un poco mas alto para evitar recortes de ejes/labels
+    // Al estar apilados a full width (690px), las alturas deben ser proporcionales
+    // Antes side-by-side: ~320px ancho × 80px → ratio 4:1 OK
+    // Ahora stacked full-width: 690px ancho → necesita más altura para no verse estirado
+    var PDF_CHART_H = 160;      // altura del chart-box en el PDF (px)
+    var PDF_CHART_OPER_H = 180; // un poco mas alto para el gráfico de línea
 
     // A4 con márgenes 5mm c/lado → área útil ≈ 200mm ≈ 755px a 96dpi
     // Reducido a 690px para asegurar que todo quepa en 2 columnas
