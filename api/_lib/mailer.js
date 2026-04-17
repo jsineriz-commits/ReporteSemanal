@@ -66,16 +66,42 @@ async function sendEmail({ to, cc, subject, text, pdfBuffer, fileName }) {
 
 /**
  * Guarda un PDF en una carpeta de Drive.
- * Equivale a DriveApp.getFolderById(id).createFile() en Apps Script.
+ *
+ * Usa OAuth2 con refresh token si la variable GOOGLE_DRIVE_REFRESH_TOKEN está
+ * configurada en Vercel (funciona con carpetas de Drive personal).
+ * Si no, usa el Service Account (solo funciona con Shared Drives / Unidades Compartidas).
+ *
+ * Para obtener el refresh token:
+ *   1. https://developers.google.com/oauthplayground
+ *   2. Gear icon → check "Use your own OAuth credentials"
+ *      → ingresar GOOGLE_DRIVE_CLIENT_ID y GOOGLE_DRIVE_CLIENT_SECRET
+ *   3. Step 1: seleccionar "Drive API v3" → https://www.googleapis.com/auth/drive
+ *   4. Step 2: Exchange → copiar el "Refresh token"
+ *   5. Agregar GOOGLE_DRIVE_REFRESH_TOKEN en Vercel → Settings → Environment Variables
  *
  * @param {string} folderId
  * @param {string} fileName
  * @param {Buffer} pdfBuffer
  */
 async function saveToDrive(folderId, fileName, pdfBuffer) {
-  if (!folderId || !folderId.trim()) return; // sin carpeta → no-op
+  if (!folderId || !folderId.trim()) return;
 
-  const auth  = await getAuthClient();
+  let auth;
+
+  if (process.env.GOOGLE_DRIVE_REFRESH_TOKEN) {
+    // ── Camino OAuth2 (Drive personal, cualquier carpeta compartida) ──────────
+    const client = new google.auth.OAuth2(
+      process.env.GOOGLE_DRIVE_CLIENT_ID,
+      process.env.GOOGLE_DRIVE_CLIENT_SECRET,
+      'urn:ietf:wg:oauth:2.0:oob'
+    );
+    client.setCredentials({ refresh_token: process.env.GOOGLE_DRIVE_REFRESH_TOKEN });
+    auth = client;
+  } else {
+    // ── Camino Service Account (solo Shared Drives / Unidades Compartidas) ────
+    auth = await getAuthClient();
+  }
+
   const drive = google.drive({ version: 'v3', auth });
 
   const { Readable } = require('stream');
@@ -84,6 +110,7 @@ async function saveToDrive(folderId, fileName, pdfBuffer) {
   stream.push(null);
 
   await drive.files.create({
+    supportsAllDrives: true, // necesario para Shared Drives
     requestBody: {
       name:    fileName,
       parents: [folderId.trim()],
