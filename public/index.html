@@ -2081,7 +2081,7 @@
       clone.style.background = '#fff';
 
       var chartsRow = clone.querySelector('.charts-row');
-      if (chartsRow) chartsRow.style.gridTemplateColumns = '1.2fr 1fr'; // keep side by side
+      if (chartsRow) chartsRow.style.gridTemplateColumns = '1fr'; // stacked vertically in PDF
       var box = clone.querySelector('#chartBox') || clone.querySelector('.chart-box');
       if (box) box.style.height = PDF_CHART_H + 'px';
       var boxOper = clone.querySelector('#chartOperBox');
@@ -2253,94 +2253,74 @@
 
             slo(true, 'Generando PDF: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
 
+            // Esperar que los gráficos terminen de animarse y luego capturar
+            // usando el mismo mecanismo que el botón PDF manual
             setTimeout(function () {
-              requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                  setTimeout(function () {
+              var pdfName = 'Reporte_' + nombre.replace(/\s+/g, '_') + '_S' + week + '.pdf';
 
-                    var pdfName = 'Reporte_' + nombre.replace(/\s+/g, '_') + '_S' + week + '.pdf';
+              // Detener animación del gráfico para frame estable
+              if (window._operAnimId) {
+                cancelAnimationFrame(window._operAnimId);
+                window._operAnimId = null;
+              }
 
-                    // Aplicar altura reducida al chart-box directamente (DOM inline)
-                    prepararParaPDF();
+              // Clonar el reporte (igual que exportPDF manual)
+              var pdfWrapper = buildPdfReportClone();
+              if (!pdfWrapper) {
+                noEnviados.push(nombre + ' — error al clonar DOM');
+                procesarSiguiente(); return;
+              }
+              var content = pdfWrapper.firstChild;
+              void content.offsetHeight; // forzar reflow para medir correctamente
+              var hPx = content.scrollHeight || content.offsetHeight;
+              var hMm = (hPx * 0.264583) + 10;
 
-                    // rAF1: layout aplicado
-                    requestAnimationFrame(function () {
-                      // Redibujar canvas al nuevo tamaño
-                      if (LAST_CHART_SERIES)
-                        drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
-                      if (LAST_OPER_SERIES)
-                        drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
+              html2pdf()
+                .set(getPdfOptions(pdfName, hMm))
+                .from(content)
+                .outputPdf('blob')
+                .then(function (pdfBlob) {
+                  cleanupPdfReportClone(pdfWrapper);
 
-                      // rAF2: canvas pintado — cancelar animación ANTES de capturar
-                      requestAnimationFrame(function () {
-                        if (window._operAnimId) {
-                          cancelAnimationFrame(window._operAnimId);
-                          window._operAnimId = null;
-                        }
+                  slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
 
-                        // Usar buildPdfReportClone() igual que el botón PDF manual:
-                        // convierte los canvas a imágenes estáticas y fija el ancho a PDF_WIDTH
-                        restaurarDespuesDePDF();
-                        var pdfWrapper = buildPdfReportClone();
-                        if (!pdfWrapper) {
-                          noEnviados.push(nombre + ' — error al clonar DOM');
-                          procesarSiguiente(); return;
-                        }
-                        var content = pdfWrapper.firstChild;
-                        var hPx = content.scrollHeight || content.offsetHeight;
-                        var hMm = (hPx * 0.264583) + 10;
+                  var reader = new FileReader();
+                  reader.onloadend = function () {
+                    var base64 = reader.result.split(',')[1];
+                    var finalBody = body
+                      .replace(/\[NOMBRE\]/g, nombreMail)
+                      .replace(/\[LINK_CARPETA\]/g, folderId
+                        ? 'https://drive.google.com/drive/folders/' + folderId
+                        : '[link carpeta]');
 
-                        html2pdf()
-                          .set(getPdfOptions(pdfName, hMm))
-                          .from(content)
-                          .outputPdf('blob')
-                          .then(function (pdfBlob) {
-                            cleanupPdfReportClone(pdfWrapper);
+                    var avanzado = false;
+                    var timeoutId = setTimeout(function () {
+                      if (!avanzado) { avanzado = true; noEnviados.push(nombre + ' — timeout'); procesarSiguiente(); }
+                    }, 90000);
 
-                            slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
-
-                            var reader = new FileReader();
-                            reader.onloadend = function () {
-                              var base64 = reader.result.split(',')[1];
-                              var finalBody = body
-                                .replace(/\[NOMBRE\]/g, nombreMail)
-                                .replace(/\[LINK_CARPETA\]/g, folderId
-                                  ? 'https://drive.google.com/drive/folders/' + folderId
-                                  : '[link carpeta]');
-
-                              var avanzado = false;
-                              var timeoutId = setTimeout(function () {
-                                if (!avanzado) { avanzado = true; noEnviados.push(nombre + ' — timeout'); procesarSiguiente(); }
-                              }, 90000);
-
-                              google.script.run
-                                .withSuccessHandler(function () {
-                                  if (avanzado) return;
-                                  avanzado = true; clearTimeout(timeoutId);
-                                  enviados.push(nombre); procesarSiguiente();
-                                })
-                                .withFailureHandler(function (err) {
-                                  if (avanzado) return;
-                                  avanzado = true; clearTimeout(timeoutId);
-                                  noEnviados.push(nombre + ' — error al enviar: ' + (err.message || err));
-                                  procesarSiguiente();
-                                })
-                                .sendEmailWithPDF(nombre, email, cc, folderId, base64, pdfName, finalBody);
-                            };
-                            reader.readAsDataURL(pdfBlob);
-                          })
-                          .catch(function (e) {
-                            cleanupPdfReportClone(pdfWrapper);
-                            noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
-                            procesarSiguiente();
-                          });
-                      });
-                    });
-
-                  }, 600);
+                    google.script.run
+                      .withSuccessHandler(function () {
+                        if (avanzado) return;
+                        avanzado = true; clearTimeout(timeoutId);
+                        enviados.push(nombre); procesarSiguiente();
+                      })
+                      .withFailureHandler(function (err) {
+                        if (avanzado) return;
+                        avanzado = true; clearTimeout(timeoutId);
+                        noEnviados.push(nombre + ' — error al enviar: ' + (err.message || err));
+                        procesarSiguiente();
+                      })
+                      .sendEmailWithPDF(nombre, email, cc, folderId, base64, pdfName, finalBody);
+                  };
+                  reader.readAsDataURL(pdfBlob);
+                })
+                .catch(function (e) {
+                  cleanupPdfReportClone(pdfWrapper);
+                  noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
+                  procesarSiguiente();
                 });
-              });
-            }, 300);
+
+            }, 800);
 
           })
           .withFailureHandler(function (e) {
