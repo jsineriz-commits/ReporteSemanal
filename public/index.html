@@ -2031,7 +2031,6 @@
         filename: filename,
         image: { type: 'png', quality: 1 },
         html2canvas: {
-          windowWidth: PDF_WIDTH,
           scale: 2,
           useCORS: true,
           allowTaint: true,
@@ -2070,11 +2069,11 @@
 
       var wrapper = document.createElement('div');
       wrapper.style.position = 'fixed';
-      wrapper.style.left = '0px';
-      wrapper.style.top = '0px';
+      wrapper.style.left = '-10000px';
+      wrapper.style.top = '0';
       wrapper.style.width = PDF_WIDTH + 'px';
       wrapper.style.background = '#fff';
-      wrapper.style.zIndex = '-9999';
+      wrapper.style.zIndex = '-1';
 
       var clone = rpt.cloneNode(true);
       clone.classList.add('is-pdf');
