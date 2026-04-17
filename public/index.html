@@ -2021,11 +2021,21 @@
       // Restaurar gaps
       var smKpis = eid('sm-kpis');
       if (smKpis) smKpis.style.gap = '';
-      // Forzar reflow de múltiples elementos para asegurar recalcular el layout
+      // Forzar reflow para que el CSS se re-aplique antes de medir
       if (rpt) { void rpt.offsetHeight; void rpt.offsetWidth; }
       if (chartsRow) { void chartsRow.offsetHeight; }
       if (box) { void box.offsetHeight; }
       if (boxOper) { void boxOper.offsetHeight; }
+      // Redibujar gráficos al tamaño normal en dos rAFs:
+      // rAF1 → layout CSS aplicado; rAF2 → paint con dimensiones correctas
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          if (LAST_CHART_SERIES)
+            drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
+          if (LAST_OPER_SERIES)
+            drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
+        });
+      });
     }
 
     function getPdfOptions(filename, heightMm) {
