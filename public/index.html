@@ -2253,74 +2253,98 @@
 
             slo(true, 'Generando PDF: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
 
-            // Esperar que los gráficos terminen de animarse y luego capturar
-            // usando el mismo mecanismo que el botón PDF manual
+            // Redimensionar → redibujar → clonar (mientras está en tamaño PDF) → restaurar
             setTimeout(function () {
-              var pdfName = 'Reporte_' + nombre.replace(/\s+/g, '_') + '_S' + week + '.pdf';
+              requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                  var pdfName = 'Reporte_' + nombre.replace(/\s+/g, '_') + '_S' + week + '.pdf';
 
-              // Detener animación del gráfico para frame estable
-              if (window._operAnimId) {
-                cancelAnimationFrame(window._operAnimId);
-                window._operAnimId = null;
-              }
+                  // Paso 1: redimensionar cajas al tamaño PDF
+                  prepararParaPDF();
 
-              // Clonar el reporte (igual que exportPDF manual)
-              var pdfWrapper = buildPdfReportClone();
-              if (!pdfWrapper) {
-                noEnviados.push(nombre + ' — error al clonar DOM');
-                procesarSiguiente(); return;
-              }
-              var content = pdfWrapper.firstChild;
-              void content.offsetHeight; // forzar reflow para medir correctamente
-              var hPx = content.scrollHeight || content.offsetHeight;
-              var hMm = (hPx * 0.264583) + 10;
+                  requestAnimationFrame(function () {
+                    // Paso 2: redibujar gráficos al tamaño PDF (proporciones correctas)
+                    if (LAST_CHART_SERIES)
+                      drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
+                    if (LAST_OPER_SERIES)
+                      drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
 
-              html2pdf()
-                .set(getPdfOptions(pdfName, hMm))
-                .from(content)
-                .outputPdf('blob')
-                .then(function (pdfBlob) {
-                  cleanupPdfReportClone(pdfWrapper);
+                    requestAnimationFrame(function () {
+                      // Paso 3: frame pintado — detener animación
+                      if (window._operAnimId) { cancelAnimationFrame(window._operAnimId); window._operAnimId = null; }
 
-                  slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
+                      // Paso 4: clonar MIENTRAS los gráficos están al tamaño PDF
+                      var pdfWrapper = buildPdfReportClone();
 
-                  var reader = new FileReader();
-                  reader.onloadend = function () {
-                    var base64 = reader.result.split(',')[1];
-                    var finalBody = body
-                      .replace(/\[NOMBRE\]/g, nombreMail)
-                      .replace(/\[LINK_CARPETA\]/g, folderId
-                        ? 'https://drive.google.com/drive/folders/' + folderId
-                        : '[link carpeta]');
+                      // Paso 5: restaurar DOM vivo y redibujar en tamaño normal
+                      restaurarDespuesDePDF();
+                      requestAnimationFrame(function () {
+                        if (LAST_CHART_SERIES)
+                          drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
+                        if (LAST_OPER_SERIES)
+                          drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
+                      });
 
-                    var avanzado = false;
-                    var timeoutId = setTimeout(function () {
-                      if (!avanzado) { avanzado = true; noEnviados.push(nombre + ' — timeout'); procesarSiguiente(); }
-                    }, 90000);
+                      if (!pdfWrapper) {
+                        noEnviados.push(nombre + ' — error al clonar DOM');
+                        procesarSiguiente(); return;
+                      }
 
-                    google.script.run
-                      .withSuccessHandler(function () {
-                        if (avanzado) return;
-                        avanzado = true; clearTimeout(timeoutId);
-                        enviados.push(nombre); procesarSiguiente();
-                      })
-                      .withFailureHandler(function (err) {
-                        if (avanzado) return;
-                        avanzado = true; clearTimeout(timeoutId);
-                        noEnviados.push(nombre + ' — error al enviar: ' + (err.message || err));
-                        procesarSiguiente();
-                      })
-                      .sendEmailWithPDF(nombre, email, cc, folderId, base64, pdfName, finalBody);
-                  };
-                  reader.readAsDataURL(pdfBlob);
-                })
-                .catch(function (e) {
-                  cleanupPdfReportClone(pdfWrapper);
-                  noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
-                  procesarSiguiente();
-                });
+                      // Paso 6: generar PDF desde el clon
+                      var content = pdfWrapper.firstChild;
+                      void content.offsetHeight;
+                      var hPx = content.scrollHeight || content.offsetHeight;
+                      var hMm = (hPx * 0.264583) + 10;
 
-            }, 800);
+                      html2pdf()
+                        .set(getPdfOptions(pdfName, hMm))
+                        .from(content)
+                        .outputPdf('blob')
+                        .then(function (pdfBlob) {
+                          cleanupPdfReportClone(pdfWrapper);
+
+                          slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
+
+                          var reader = new FileReader();
+                          reader.onloadend = function () {
+                            var base64 = reader.result.split(',')[1];
+                            var finalBody = body
+                              .replace(/\[NOMBRE\]/g, nombreMail)
+                              .replace(/\[LINK_CARPETA\]/g, folderId
+                                ? 'https://drive.google.com/drive/folders/' + folderId
+                                : '[link carpeta]');
+
+                            var avanzado = false;
+                            var timeoutId = setTimeout(function () {
+                              if (!avanzado) { avanzado = true; noEnviados.push(nombre + ' — timeout'); procesarSiguiente(); }
+                            }, 90000);
+
+                            google.script.run
+                              .withSuccessHandler(function () {
+                                if (avanzado) return;
+                                avanzado = true; clearTimeout(timeoutId);
+                                enviados.push(nombre); procesarSiguiente();
+                              })
+                              .withFailureHandler(function (err) {
+                                if (avanzado) return;
+                                avanzado = true; clearTimeout(timeoutId);
+                                noEnviados.push(nombre + ' — error al enviar: ' + (err.message || err));
+                                procesarSiguiente();
+                              })
+                              .sendEmailWithPDF(nombre, email, cc, folderId, base64, pdfName, finalBody);
+                          };
+                          reader.readAsDataURL(pdfBlob);
+                        })
+                        .catch(function (e) {
+                          cleanupPdfReportClone(pdfWrapper);
+                          noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
+                          procesarSiguiente();
+                        });
+                    }); // rAF frame estable
+                  }); // rAF redibujado
+                }); // rAF 2
+              }); // rAF 1
+            }, 500); // setTimeout render inicial
 
           })
           .withFailureHandler(function (e) {
