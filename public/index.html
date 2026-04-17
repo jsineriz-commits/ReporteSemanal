@@ -2323,9 +2323,15 @@
                             }, 90000);
 
                             google.script.run
-                              .withSuccessHandler(function () {
+                              .withSuccessHandler(function (resp) {
                                 if (avanzado) return;
                                 avanzado = true; clearTimeout(timeoutId);
+                                // Log estado de Drive para diagnosticar
+                                if (resp && !resp.driveOk) {
+                                  console.warn('[Drive] NO guardado para ' + nombre + ' — ' + (resp.driveError || 'sin detalle'));
+                                } else if (resp && resp.driveOk) {
+                                  console.log('[Drive] OK guardado para ' + nombre);
+                                }
                                 enviados.push(nombre); procesarSiguiente();
                               })
                               .withFailureHandler(function (err) {
