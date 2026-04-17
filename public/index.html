@@ -2274,28 +2274,29 @@
 
                       // rAF2: canvas pintado — cancelar animación ANTES de capturar
                       requestAnimationFrame(function () {
-                        // Detener animación del gráfico para evitar frames corruptos en el PDF
                         if (window._operAnimId) {
                           cancelAnimationFrame(window._operAnimId);
                           window._operAnimId = null;
                         }
-                        var rptNode = eid('rpt');
-                        var hPx = rptNode.scrollHeight || rptNode.offsetHeight;
+
+                        // Usar buildPdfReportClone() igual que el botón PDF manual:
+                        // convierte los canvas a imágenes estáticas y fija el ancho a PDF_WIDTH
+                        restaurarDespuesDePDF();
+                        var pdfWrapper = buildPdfReportClone();
+                        if (!pdfWrapper) {
+                          noEnviados.push(nombre + ' — error al clonar DOM');
+                          procesarSiguiente(); return;
+                        }
+                        var content = pdfWrapper.firstChild;
+                        var hPx = content.scrollHeight || content.offsetHeight;
                         var hMm = (hPx * 0.264583) + 10;
+
                         html2pdf()
                           .set(getPdfOptions(pdfName, hMm))
-                          .from(rptNode)
+                          .from(content)
                           .outputPdf('blob')
                           .then(function (pdfBlob) {
-
-                            // Restaurar chart-box y redibujar normal
-                            restaurarDespuesDePDF();
-                            requestAnimationFrame(function () {
-                              if (LAST_CHART_SERIES)
-                                drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
-                              if (LAST_OPER_SERIES)
-                                drawOperLineChart(LAST_OPER_SERIES.labels, LAST_OPER_SERIES.vals, LAST_OPER_SERIES.base);
-                            });
+                            cleanupPdfReportClone(pdfWrapper);
 
                             slo(true, 'Enviando mail: ' + nombre + ' (' + contador + '/' + totalParaEnviar + ')');
 
@@ -2330,7 +2331,7 @@
                             reader.readAsDataURL(pdfBlob);
                           })
                           .catch(function (e) {
-                            restaurarDespuesDePDF();
+                            cleanupPdfReportClone(pdfWrapper);
                             noEnviados.push(nombre + ' — error PDF: ' + (e.message || e));
                             procesarSiguiente();
                           });
