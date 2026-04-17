@@ -1612,6 +1612,10 @@
       title.innerText = panelTitle;
       panel.classList.add('is-visible');
 
+      // Mostrar botón X para volver al ranking
+      var closeBtn = eid('sp-close-btn');
+      if (closeBtn) closeBtn.style.display = '';
+
       // Forzar redibujado de gráficos al cambiar el layout
       setTimeout(redrawCharts, 50);
 
