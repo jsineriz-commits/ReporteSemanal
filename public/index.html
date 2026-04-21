@@ -185,6 +185,34 @@
       margin: 0 4px
     }
 
+    .btn-nav {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--rad-sm);
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--t-muted);
+      font-size: 13px;
+      line-height: 1;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .btn-nav:hover {
+      background: var(--bg-main);
+      color: var(--t-main);
+      border-color: #9ca3af;
+    }
+    .btn-nav:disabled {
+      opacity: 0.3;
+      cursor: default;
+      pointer-events: none;
+    }
+
     .btn {
       font-family: 'Inter', sans-serif;
       font-size: 12px;
@@ -1066,9 +1094,11 @@
 <body>
   <div class="ctrl" id="ctrlBar">
     <div class="cg"><label>AC</label>
+      <button class="btn-nav" id="btnACPrev" onclick="navAC(-1)" title="AC anterior" disabled>&#8592;</button>
       <select id="selAC" onchange="autoGen()">
         <option value="">Cargando...</option>
       </select>
+      <button class="btn-nav" id="btnACNext" onclick="navAC(1)" title="AC siguiente" disabled>&#8594;</button>
     </div>
     <div class="sep"></div>
     <div class="cg"><label>Semana</label><select id="selSem" onchange="autoGen()"></select></div>
@@ -1211,6 +1241,7 @@
       google.script.run.warmup();
       eid('empty').innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Seleccioná un AC y una semana</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
       eid('rpt').innerHTML = initTemplateSkeletons();
+      updateNavBtns();
     }
 
     function popSem() {
@@ -1234,6 +1265,33 @@
       if (best) sel.value = best;
     }
 
+    // ── Navegación AC con flechas ← → ─────────────────────────────────────────
+    function navAC(dir) {
+      var sel = eid('selAC');
+      if (!sel) return;
+      var cur = sel.selectedIndex;
+      // Encontrar el primer índice válido (saltear el placeholder index 0)
+      var next = cur + dir;
+      if (next <= 0) next = 1;
+      if (next >= sel.options.length) next = sel.options.length - 1;
+      if (next === cur || !sel.options[next] || !sel.options[next].value) return;
+      sel.selectedIndex = next;
+      updateNavBtns();
+      autoGen();
+    }
+
+    function updateNavBtns() {
+      var sel = eid('selAC');
+      var prev = eid('btnACPrev'), next = eid('btnACNext');
+      if (!sel || !prev || !next) return;
+      var idx = sel.selectedIndex;
+      var total = sel.options.length;
+      // Botón prev: deshabilitado si estamos en el primero válido (idx 1) o en placeholder (idx 0)
+      prev.disabled = (idx <= 1);
+      // Botón next: deshabilitado si estamos en el último
+      next.disabled = (idx <= 0 || idx >= total - 1);
+    }
+
     function autoGen() {
       // 1. Cerramos el panel lateral si está abierto al cambiar de AC/Semana
       var panel = document.getElementById('side-panel');
@@ -1241,7 +1299,7 @@
         closeSidePanel();
       }
 
-      var ac = eid('selAC').value, sv = eid('selSem').value; if (!ac || !sv) return;
+      var ac = eid('selAC').value, sv = eid('selSem').value; updateNavBtns(); if (!ac || !sv) return;
       var cKey = ac + '_' + sv;
       eid('rpt').style.display = 'block'; eid('empty').style.display = 'none';
       if (L_CACHE[cKey] && (Date.now() - L_CACHE[cKey].ts < 3600000)) { renderAll(L_CACHE[cKey].data, ac, sv); return; }
