@@ -4,6 +4,10 @@
   "engines": {
     "node": "20.x"
   },
+  "scripts": {
+    "dev": "node local-dev.js",
+    "start": "node local-dev.js"
+  },
   "dependencies": {
     "express": "^5.2.1",
     "googleapis": "^140.0.0",

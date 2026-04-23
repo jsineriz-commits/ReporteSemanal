@@ -130,14 +130,14 @@ async function loadData() {
   const cached = cache.get('data');
   if (cached) return cached;
 
-  console.log('[logic] loadData: cache miss, leyendo 9 hojas en paralelo...');
+  console.log('[logic] loadData: cache miss, leyendo BASE/OPS desde Metabase + 7 hojas en paralelo...');
 
   const [
-    baseRaw, opsRaw, comsRaw, agendasRaw,
+    metaBase, metaOps, comsRaw, agendasRaw,
     leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, bcfullRaw,
   ] = await Promise.all([
-    getSheetData('BASE'),
-    getSheetData('OPS'),
+    fetchMetabaseQuery(101),          // BASE  → Metabase Q101
+    fetchMetabaseQuery(102),          // OPS   → Metabase Q102
     getSheetData('Comentarios_CRM'),
     getSheetData('Agenda_CRM'),
     getSheetData('Leads_CRM'),
@@ -147,12 +147,11 @@ async function loadData() {
     getSheetData('BCFULL'),
   ]);
 
-  // ── BASE ──
+  // ── BASE (Metabase Q101) ──
   const base = [];
   const bMap = {};
-  if (baseRaw && baseRaw[0]) {
-    baseRaw[0].forEach((h, i) => { if (h) bMap[String(h).trim().toLowerCase()] = i; });
-  }
+  // Metabase devuelve headers ya en lowercase — no necesita slice ni trim
+  (metaBase.headers || []).forEach((h, i) => { if (h) bMap[h] = i; });
   const idxB = {
     ac: bMap['ac_vend'] ?? bMap['ac vendedor'] ?? bMap['asociado_comercial'] ?? bMap['asociado comercial'] ?? 5,
     f: bMap['fecha_publicaciones'] ?? bMap['fecha publicaciones'] ?? bMap['fecha'] ?? bMap['f_crea'] ?? bMap['created_at'] ?? 1,
@@ -166,7 +165,8 @@ async function loadData() {
     repVend: bMap['repre_vendedor'] ?? bMap['repre vendedor'] ?? bMap['repre_vend'] ?? bMap['representante'] ?? 20,
     repComp: bMap['repre_comprador'] ?? bMap['repre comprador'] ?? bMap['repre_comp'] ?? 21,
   };
-  (baseRaw || []).slice(1).forEach(row => {
+  console.log('[logic] BASE (Q101): headers=', metaBase.headers, '| filas=', (metaBase.rows || []).length, '| idxB=', idxB);
+  (metaBase.rows || []).forEach(row => {
     const ac = norm(g(row, idxB.ac));
     const repVend = norm(g(row, idxB.repVend));
     const repComp = norm(g(row, idxB.repComp));
@@ -200,12 +200,11 @@ async function loadData() {
     ]);
   });
 
-  // ── OPS ──
+  // ── OPS (Metabase Q102) ──
   const ops = [];
   const oMap = {};
-  if (opsRaw && opsRaw[0]) {
-    opsRaw[0].forEach((h, i) => { if (h) oMap[String(h).trim().toLowerCase()] = i; });
-  }
+  // Metabase devuelve headers ya en lowercase — no necesita slice ni trim
+  (metaOps.headers || []).forEach((h, i) => { if (h) oMap[h] = i; });
   const idxO = {
     aV: oMap['asoc_com_vend'] ?? oMap['asoc com vend'] ?? 6,
     aC: oMap['asoc_com_compra'] ?? oMap['asoc com compra'] ?? 8,
@@ -224,7 +223,8 @@ async function loadData() {
     cuitC: oMap['cuit_comp'] ?? oMap['cuit comp'] ?? 21,
     qPart: oMap['q_particular'] ?? oMap['q particular'] ?? 16
   };
-  (opsRaw || []).slice(1).forEach(row => {
+  console.log('[logic] OPS (Q102): headers=', metaOps.headers, '| filas=', (metaOps.rows || []).length, '| idxO=', idxO);
+  (metaOps.rows || []).forEach(row => {
     const aV = norm(g(row, idxO.aV)), aC = norm(g(row, idxO.aC));
     const rV = norm(g(row, idxO.rV)), rC = norm(g(row, idxO.rC));
     if (!aV && !aC && !rV && !rC) return;
