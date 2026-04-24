@@ -1137,7 +1137,7 @@
 
 <body>
   <div class="ctrl" id="ctrlBar">
-    <div class="cg"><label>AC</label>
+    <div class="cg"><label>AC/REPRE</label>
       <button class="btn-nav" id="btnACPrev" onclick="navAC(-1)" title="AC anterior" disabled>&#8592;</button>
       <select id="selAC" onchange="autoGen()">
         <option value="">Cargando...</option>
@@ -1145,7 +1145,11 @@
       <button class="btn-nav" id="btnACNext" onclick="navAC(1)" title="AC siguiente" disabled>&#8594;</button>
     </div>
     <div class="sep"></div>
-    <div class="cg"><label>Semana</label><select id="selSem" onchange="autoGen()"></select></div>
+    <div class="cg"><label>Semana</label>
+      <button class="btn-nav" id="btnSemPrev" onclick="navSem(-1)" title="Semana anterior" disabled>&#8592;</button>
+      <select id="selSem" onchange="autoGen()"></select>
+      <button class="btn-nav" id="btnSemNext" onclick="navSem(1)" title="Semana siguiente" disabled>&#8594;</button>
+    </div>
     <div class="mla" style="display:flex;gap:8px">
       <button class="btn b-refresh" id="btnRefresh" onclick="refreshToLatest()">Actualizar versión</button>
       <span id="cacheTsBadge" class="cache-ts-badge" style="display:none" title="Fecha de carga de datos de Metabase">
@@ -1299,9 +1303,19 @@
       }
       popSem();
       google.script.run.warmup();
-      eid('empty').innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Seleccioná un AC y una semana</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
-      eid('rpt').innerHTML = initTemplateSkeletons();
       updateNavBtns();
+      // Auto-seleccionar el primer AC y generar el reporte
+      if (sel.options.length > 1) {
+        sel.selectedIndex = 1;
+        updateNavBtns();
+        eid('rpt').innerHTML = initTemplateSkeletons();
+        eid('rpt').style.display = 'block';
+        eid('empty').style.display = 'none';
+        autoGen();
+      } else {
+        eid('empty').innerHTML = errH + '<h3 style="color:#374151;font-size:14px;margin-top:12px">Seleccioná un AC y una semana</h3><p style="font-size:11px;color:#9ca3af">Al elegir ambos se genera automáticamente.</p>';
+        eid('rpt').innerHTML = initTemplateSkeletons();
+      }
     }
 
     function popSem() {
@@ -1330,7 +1344,6 @@
       var sel = eid('selAC');
       if (!sel) return;
       var cur = sel.selectedIndex;
-      // Encontrar el primer índice válido (saltear el placeholder index 0)
       var next = cur + dir;
       if (next <= 0) next = 1;
       if (next >= sel.options.length) next = sel.options.length - 1;
@@ -1340,16 +1353,38 @@
       autoGen();
     }
 
+    function navSem(dir) {
+      var sel = eid('selSem');
+      if (!sel) return;
+      var cur = sel.selectedIndex;
+      var next = cur + dir;
+      if (next < 0) next = 0;
+      if (next >= sel.options.length) next = sel.options.length - 1;
+      if (next === cur || !sel.options[next] || !sel.options[next].value) return;
+      sel.selectedIndex = next;
+      updateNavBtns();
+      autoGen();
+    }
+
     function updateNavBtns() {
+      // AC nav
       var sel = eid('selAC');
       var prev = eid('btnACPrev'), next = eid('btnACNext');
-      if (!sel || !prev || !next) return;
-      var idx = sel.selectedIndex;
-      var total = sel.options.length;
-      // Botón prev: deshabilitado si estamos en el primero válido (idx 1) o en placeholder (idx 0)
-      prev.disabled = (idx <= 1);
-      // Botón next: deshabilitado si estamos en el último
-      next.disabled = (idx <= 0 || idx >= total - 1);
+      if (sel && prev && next) {
+        var idx = sel.selectedIndex;
+        var total = sel.options.length;
+        prev.disabled = (idx <= 1);
+        next.disabled = (idx <= 0 || idx >= total - 1);
+      }
+      // Semana nav
+      var selS = eid('selSem');
+      var prevS = eid('btnSemPrev'), nextS = eid('btnSemNext');
+      if (selS && prevS && nextS) {
+        var idxS = selS.selectedIndex;
+        var totalS = selS.options.length;
+        prevS.disabled = (idxS <= 0);
+        nextS.disabled = (idxS <= 0 || idxS >= totalS - 1);
+      }
     }
 
     function autoGen() {
