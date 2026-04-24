@@ -7,6 +7,7 @@ const { fetchMetabaseQuery } = require('./metabase');
 const cache = require('./cache');
 const props = require('./props');
 const diskCache = require('./metaDiskCache');
+const redisCache = require('./redisCache');
 
 // ─── bcfull: mapa módulo-level cargado en background desde Metabase Q221 ───────────────
 const _bcfullMap  = new Map(); // cuit → { kt: bovinos, kv: vaca }
@@ -203,42 +204,63 @@ async function getConfig() {
 
 // ─── loadData ─────────────────────────────────────────────────────────────────
 // Lee las 9 hojas en paralelo y construye los arrays de datos.
-async function loadData() {
+// forceRefresh=true: ignora todos los caches y recarga desde Metabase.
+async function loadData(forceRefresh) {
   const cached = cache.get('data');
-  if (cached) return cached;
+  if (cached && !forceRefresh) return cached;
 
-  // ── Intentar cargar Q101+Q102 desde disk cache (12h TTL) ──
-  const disk = diskCache.readCache();
-  let metaBase, metaOps;
+  const useRedis = redisCache.isConfigured();
 
-  if (disk && disk.metaBase && disk.metaOps) {
-    console.log('[logic] loadData: usando disk cache para Q101+Q102');
-    metaBase = disk.metaBase;
-    metaOps  = disk.metaOps;
-    // Q221 también puede venir del disco
-    _ensureBcfull(disk.metaEstab || null);
-
-    // Sheets siempre frescos (rápidos)
-    const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
-      getSheetData('Comentarios_CRM'),
-      getSheetData('Agenda_CRM'),
-      getSheetData('Leads_CRM'),
-      getSheetData('aux leads'),
-      getSheetData('SAC'),
-      getSheetData('REMATES'),
-    ]);
-    return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, disk.ts);
+  // ── 1. Redis cache (producción / Vercel) ──────────────────────────────────
+  if (useRedis && !forceRefresh) {
+    const red = await redisCache.readCache();
+    if (red && red.metaBase && red.metaOps && red.bcMapObj) {
+      console.log('[logic] loadData: usando Redis cache');
+      // Restaurar bcfullMap desde el objeto cacheado
+      _bcfullMap.clear();
+      for (const [cuit, val] of Object.entries(red.bcMapObj)) {
+        _bcfullMap.set(cuit, val);
+      }
+      _bcfullState = 'done';
+      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
+        getSheetData('Comentarios_CRM'),
+        getSheetData('Agenda_CRM'),
+        getSheetData('Leads_CRM'),
+        getSheetData('aux leads'),
+        getSheetData('SAC'),
+        getSheetData('REMATES'),
+      ]);
+      return _processLoadData(red.metaBase, red.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, red.ts);
+    }
   }
 
-  console.log('[logic] loadData: cache miss, cargando BASE/OPS/Q221 desde Metabase + 6 hojas de Sheets...');
+  // ── 2. Disk cache (local dev, sin Redis) ──────────────────────────────────
+  if (!useRedis && !forceRefresh) {
+    const disk = diskCache.readCache();
+    if (disk && disk.metaBase && disk.metaOps) {
+      console.log('[logic] loadData: usando disk cache para Q101+Q102');
+      _ensureBcfull(disk.metaEstab || null);
+      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
+        getSheetData('Comentarios_CRM'),
+        getSheetData('Agenda_CRM'),
+        getSheetData('Leads_CRM'),
+        getSheetData('aux leads'),
+        getSheetData('SAC'),
+        getSheetData('REMATES'),
+      ]);
+      return _processLoadData(disk.metaBase, disk.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, disk.ts);
+    }
+  }
 
+  // ── 3. Fetch fresco desde Metabase ───────────────────────────────────────
+  console.log('[logic] loadData: cargando BASE/OPS/Q221 desde Metabase + 6 hojas de Sheets...');
   const [
     metaBaseFetched, metaOpsFetched, metaEstabFetched, comsRaw, agendasRaw,
     leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw,
   ] = await Promise.all([
-    fetchMetabaseQuery(101),          // BASE  → Metabase Q101
-    fetchMetabaseQuery(102),          // OPS   → Metabase Q102
-    fetchMetabaseQuery(221),          // BOVINOS/VACA → Metabase Q221 (kt/kv)
+    fetchMetabaseQuery(101),
+    fetchMetabaseQuery(102),
+    fetchMetabaseQuery(221),
     getSheetData('Comentarios_CRM'),
     getSheetData('Agenda_CRM'),
     getSheetData('Leads_CRM'),
@@ -246,17 +268,24 @@ async function loadData() {
     getSheetData('SAC'),
     getSheetData('REMATES'),
   ]);
-  metaBase = metaBaseFetched;
-  metaOps  = metaOpsFetched;
 
-  // Construir bcfullMap sincrónicamente (ya tenemos los datos)
+  // Construir bcfullMap
+  _bcfullMap.clear();
   _buildBcfullMap(metaEstabFetched);
   _bcfullState = 'done';
 
-  // Guardar Q101+Q102+Q221 en disco
-  const savedTs = diskCache.writeCache({ metaBase, metaOps, metaEstab: metaEstabFetched });
+  // Serializar bcfullMap para guardarlo en cache
+  const bcMapObj = Object.fromEntries(_bcfullMap);
 
-  return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, savedTs || Date.now());
+  // Guardar en Redis (producción) o disco (local)
+  let savedTs;
+  if (useRedis) {
+    savedTs = await redisCache.writeCache(metaBaseFetched, metaOpsFetched, bcMapObj);
+  } else {
+    savedTs = diskCache.writeCache({ metaBase: metaBaseFetched, metaOps: metaOpsFetched, metaEstab: metaEstabFetched });
+  }
+
+  return _processLoadData(metaBaseFetched, metaOpsFetched, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, savedTs || Date.now());
 }
 
 // ─── _processLoadData ─────────────────────────────────────────────────────────
@@ -483,9 +512,9 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
 }
 
 // ─── warmup ──────────────────────────────────────────────────────────────────
-async function warmup() {
+async function warmup(forceRefresh) {
   await getConfig();
-  await loadData();
+  await loadData(forceRefresh || false);
   return { ok: true };
 }
 
@@ -525,8 +554,12 @@ function debugCacheStatus(ac, startTs, endTs) {
 
 // ─── refreshCacheAndWarmup ───────────────────────────────────────────────────
 async function refreshCacheAndWarmup(ac, startTs, endTs) {
+  // Limpiar cache de reportes en memoria
   const clearMsg = clearCache();
-  const warm = await warmup();
+  // Limpiar Redis (si está configurado) para forzar reload desde Metabase
+  await redisCache.deleteCache();
+  // Recargar datos frescos de Metabase con forceRefresh=true
+  const warm = await warmup(true);
   const status = debugCacheStatus(ac, startTs, endTs);
   return { ok: true, clear: clearMsg, warmup: warm, status };
 }
