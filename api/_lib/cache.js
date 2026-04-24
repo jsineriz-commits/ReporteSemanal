@@ -5,10 +5,10 @@
 const _store = new Map();
 
 const TTL = {
-  CONFIG: 3600 * 1000,    // 1 hora
-  DATA:   3600 * 1000,    // 1 hora
-  REPORT: 3600 * 1000,    // 1 hora
-  AUX:    7200 * 1000,    // 2 horas
+  CONFIG: 3600 * 1000,        // 1 hora
+  DATA:   24 * 3600 * 1000,   // 24 horas (alineado con disk cache)
+  REPORT: 24 * 3600 * 1000,   // 24 horas
+  AUX:    7200 * 1000,        // 2 horas
 };
 
 function set(key, data, ttlMs) {

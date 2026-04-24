@@ -6,6 +6,73 @@ const { getSheetData, g } = require('./sheets');
 const { fetchMetabaseQuery } = require('./metabase');
 const cache = require('./cache');
 const props = require('./props');
+const diskCache = require('./metaDiskCache');
+
+// ─── bcfull: mapa módulo-level cargado en background desde Metabase Q221 ───────────────
+const _bcfullMap  = new Map(); // cuit → { kt: bovinos, kv: vaca }
+let   _bcfullState = 'idle';   // 'idle' | 'loading' | 'done' | 'error'
+
+function _buildBcfullMap(metaEstab) {
+  const h     = metaEstab.headers || [];
+  const iCuit = h.indexOf('cuit_titular_est');
+  const iBov  = h.indexOf('bovinos');
+  const iVaca = h.indexOf('vaca');
+  if (iCuit < 0 || iBov < 0 || iVaca < 0) {
+    console.error('[bcfull] Q221: columnas no encontradas. headers=', h);
+    return;
+  }
+  const agg = Object.create(null);
+  for (const row of (metaEstab.rows || [])) {
+    const cuit = String(row[iCuit] || '').trim();
+    if (!cuit) continue;
+    if (!agg[cuit]) agg[cuit] = { bov: 0, vac: 0 };
+    agg[cuit].bov += Number(row[iBov]) || 0;
+    agg[cuit].vac += Number(row[iVaca]) || 0;
+  }
+  _bcfullMap.clear();
+  for (const [cuit, v] of Object.entries(agg)) {
+    _bcfullMap.set(cuit, { kt: String(v.bov), kv: String(v.vac) });
+    // Fuzzy key (primeros 10 dígitos) para CUITs en notación científica
+    if (cuit.length >= 10) _bcfullMap.set(cuit.slice(0, 10), { kt: String(v.bov), kv: String(v.vac) });
+  }
+  console.log('[bcfull] listo: ' + _bcfullMap.size + ' entradas.');
+}
+
+function _ensureBcfull(cachedEstab) {
+  if (_bcfullState !== 'idle') return;
+  // Si tenemos datos del disco cache, usarlos directamente (sin fetch)
+  if (cachedEstab) {
+    _bcfullState = 'loading';
+    try {
+      _buildBcfullMap(cachedEstab);
+      _bcfullState = 'done';
+      console.log('[bcfull] cargado desde disk cache');
+    } catch(e) {
+      console.error('[bcfull] error al cargar desde disk cache:', e.message);
+      _bcfullState = 'idle';
+    }
+    return;
+  }
+  _bcfullState = 'loading';
+  console.log('[bcfull] iniciando carga background de Q221...');
+  fetchMetabaseQuery(221)
+    .then(metaEstab => {
+      _buildBcfullMap(metaEstab);
+      _bcfullState = 'done';
+      // Actualizar disk cache con Q221
+      const existing = diskCache.readCache();
+      if (existing) {
+        diskCache.writeCache({ metaBase: existing.metaBase, metaOps: existing.metaOps, metaEstab });
+      }
+      // Limpiar cache de reportes para que se regeneren con kt/kv correctos
+      const cleared = cache.delByPrefix('R12_');
+      console.log('[bcfull] cache de reportes limpiado (' + (cleared || 0) + ' entradas). Próximos reportes tendrán kt/kv correctos.');
+    })
+    .catch(e => {
+      console.error('[bcfull] error en Q221:', e.message);
+      _bcfullState = 'idle';
+    });
+}
 
 // ─── Helpers de fecha ─────────────────────────────────────────────────────────
 // Estrategia: los seriales de Sheets → UTC noon (+12h) evita cruzar medianoche UTC.
@@ -81,7 +148,17 @@ function getReportCacheVersion() {
 function clearCache() {
   cache.flush();        // limpia toda la caché en memoria
   props.resetR12Ver();  // nueva versión → invalida claves de reportes
+  diskCache.deleteCache(); // elimina el cache en disco
+  _bcfullState = 'idle';   // fuerza recarga de Q221 desde Metabase
+  _bcfullMap.clear();
   return 'Cache limpiado';
+}
+
+// Solo limpia la memoria sin tocar el disco cache (para warmup automático)
+function _flushMemoryOnly() {
+  cache.flush();
+  props.resetR12Ver();
+  // NO borra disk cache ni resetea bcfull
 }
 
 // ─── getConfig ────────────────────────────────────────────────────────────────
@@ -130,11 +207,34 @@ async function loadData() {
   const cached = cache.get('data');
   if (cached) return cached;
 
-  console.log('[logic] loadData: cache miss, leyendo BASE/OPS desde Metabase + 7 hojas en paralelo...');
+  // ── Intentar cargar Q101+Q102 desde disk cache (12h TTL) ──
+  const disk = diskCache.readCache();
+  let metaBase, metaOps;
+
+  if (disk && disk.metaBase && disk.metaOps) {
+    console.log('[logic] loadData: usando disk cache para Q101+Q102');
+    metaBase = disk.metaBase;
+    metaOps  = disk.metaOps;
+    // Q221 también puede venir del disco
+    _ensureBcfull(disk.metaEstab || null);
+
+    // Sheets siempre frescos (rápidos)
+    const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
+      getSheetData('Comentarios_CRM'),
+      getSheetData('Agenda_CRM'),
+      getSheetData('Leads_CRM'),
+      getSheetData('aux leads'),
+      getSheetData('SAC'),
+      getSheetData('REMATES'),
+    ]);
+    return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, disk.ts);
+  }
+
+  console.log('[logic] loadData: cache miss, cargando BASE/OPS desde Metabase + 6 hojas de Sheets...');
 
   const [
-    metaBase, metaOps, comsRaw, agendasRaw,
-    leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, bcfullRaw,
+    metaBaseFetched, metaOpsFetched, comsRaw, agendasRaw,
+    leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw,
   ] = await Promise.all([
     fetchMetabaseQuery(101),          // BASE  → Metabase Q101
     fetchMetabaseQuery(102),          // OPS   → Metabase Q102
@@ -144,13 +244,25 @@ async function loadData() {
     getSheetData('aux leads'),
     getSheetData('SAC'),
     getSheetData('REMATES'),
-    getSheetData('BCFULL'),
   ]);
+  metaBase = metaBaseFetched;
+  metaOps  = metaOpsFetched;
 
+  // Guardar Q101+Q102 en disco (Q221 se agrega cuando termina su carga background)
+  const savedTs = diskCache.writeCache({ metaBase, metaOps });
+
+  // Q221 (bovinos/vaca por CUIT) carga en background sin bloquear el reporte
+  _ensureBcfull();
+
+  return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, savedTs || Date.now());
+}
+
+// ─── _processLoadData ─────────────────────────────────────────────────────────
+// Procesa los datos raw de Metabase + Sheets y construye los arrays internos.
+async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, metaCacheTs) {
   // ── BASE (Metabase Q101) ──
   const base = [];
   const bMap = {};
-  // Metabase devuelve headers ya en lowercase — no necesita slice ni trim
   (metaBase.headers || []).forEach((h, i) => { if (h) bMap[h] = i; });
   const idxB = {
     ac: bMap['ac_vend'] ?? bMap['ac vendedor'] ?? bMap['asociado_comercial'] ?? bMap['asociado comercial'] ?? 5,
@@ -164,6 +276,7 @@ async function loadData() {
     un: bMap['un'] ?? bMap['unidad_negocio'] ?? 7,
     repVend: bMap['repre_vendedor'] ?? bMap['repre vendedor'] ?? bMap['repre_vend'] ?? bMap['representante'] ?? 20,
     repComp: bMap['repre_comprador'] ?? bMap['repre comprador'] ?? bMap['repre_comp'] ?? 21,
+    rend:    bMap['rend'] ?? -1,
   };
   console.log('[logic] BASE (Q101): headers=', metaBase.headers, '| filas=', (metaBase.rows || []).length, '| idxB=', idxB);
   (metaBase.rows || []).forEach(row => {
@@ -195,10 +308,12 @@ async function loadData() {
       String(g(row, idxB.cuit) || ''),// 11 CUIT (col Q)
       String(g(row, idxB.un) || ''),// 12 UN (col H)
       toFmt(g(row, idxB.f)),        // 13 fmtFecha
-      repVend,                      // 14 rep vend (col U)
-      repComp,                      // 15 rep comp (col V)
+      repVend,                      // 14 rep vend
+      repComp,                      // 15 rep comp
+      Number(g(row, idxB.rend)) || 0, // 16 rend (solo para CONCRETADA)
     ]);
   });
+
 
   // ── OPS (Metabase Q102) ──
   const ops = [];
@@ -221,7 +336,8 @@ async function loadData() {
     cat: oMap['cat'] ?? oMap['categoria'] ?? 10,
     cuitV: oMap['cuit_vend'] ?? oMap['cuit vend'] ?? 20,
     cuitC: oMap['cuit_comp'] ?? oMap['cuit comp'] ?? 21,
-    qPart: oMap['q_particular'] ?? oMap['q particular'] ?? 16
+    qPart: oMap['q_particular'] ?? oMap['q particular'] ?? 16,
+    rend: oMap['rend'] ?? oMap['rendimiento'] ?? 25,
   };
   console.log('[logic] OPS (Q102): headers=', metaOps.headers, '| filas=', (metaOps.rows || []).length, '| idxO=', idxO);
   (metaOps.rows || []).forEach(row => {
@@ -249,6 +365,7 @@ async function loadData() {
       Number(g(row, idxO.qPart)) || 0,     // 17 Q particular
       rV,                                  // 18 repV
       rC,                                  // 19 repC
+      Number(g(row, idxO.rend)) || 0,      // 20 rend (rendimiento decimal, e.g. 0.083 = 8.3%)
     ]);
   });
 
@@ -357,16 +474,9 @@ async function loadData() {
     remates.push([ac, f, String(g(row, 3) || Math.random())]);
   });
 
-  // ── BCFULL ──
-  const bcfull = [];
-  bcfullRaw.slice(1).forEach(row => {
-    const cuit = String(g(row, 1) || '').trim(); if (!cuit) return;
-    bcfull.push([cuit, String(g(row, 3) || ''), String(g(row, 4) || '')]);
-  });
-
-  const data = { base, ops, coms, agendas, leads, auxLeads, sacs, remates, bcfull };
+  const data = { base, ops, coms, agendas, leads, auxLeads, sacs, remates, metaCacheTs: metaCacheTs || Date.now() };
   cache.set('data', data, cache.TTL.DATA);
-  console.log(`[logic] loadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} completado.`);
+  console.log(`[logic] _processLoadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} metaCacheTs=${new Date(metaCacheTs||0).toISOString()} completado.`);
   return data;
 }
 
@@ -378,11 +488,11 @@ async function warmup() {
 }
 
 // ─── scheduledWarmup (equivale al trigger horario de Apps Script) ─────────────
-async function scheduledWarmup() {
-  console.log('[logic] scheduledWarmup: iniciando actualización de caché...');
-  clearCache();
-  await warmup();
-  console.log('[logic] scheduledWarmup: caché actualizada.');
+function scheduledWarmup() {
+  console.log('[logic] scheduledWarmup: solo flush de memoria (disk cache preservado).');
+  // Solo borra memoria — el disco cache de 12h se respeta
+  _flushMemoryOnly();
+  warmup().then(() => console.log('[logic] scheduledWarmup: caché actualizada.'));
   return { ok: true };
 }
 
@@ -443,6 +553,8 @@ async function getReport(ac, startTs, endTs, opts) {
   const hit = cache.get(rKey);
   if (hit) {
     const result = { ...hit };
+    // Siempre refrescar metaCacheTs desde disco para que sea preciso
+    if (!result.metaCacheTs) result.metaCacheTs = diskCache.getCacheTs() || Date.now();
     const storedPrev = props.getProp(ssgPrevKey2);
     if (storedPrev !== null) result.pSocSinGestNum = parseInt(storedPrev, 10) || 0;
     return result;
@@ -551,28 +663,33 @@ async function getReport(ac, startTs, endTs, opts) {
   for (const row of D.auxLeads) {
     addKtKv(String(row[12] || '').trim(), row[4], row[5]);
   }
-  // 2. Complemento: BCFULL
-  for (const row of D.bcfull) {
-    addKtKv(String(row[0] || '').trim(), row[1], row[2]);
-  }
+  // 2. Complemento: _bcfullMap módulo-level (cargado en background desde Q221)
+  //    getKtKv lo consulta directamente — no necesita pre-cargar en cuitKtKvMap
 
   function getKtKv(cuitStr) {
-    let ktKv = cuitKtKvMap[cuitStr];
-    if (ktKv) return ktKv;
-    // Fallback: Si Sheets devolvió "2.018050136E+10"
+    // a) Q221 (bcfull) — fuente primaria: datos oficiales de Metabase
+    if (_bcfullMap.has(cuitStr)) return _bcfullMap.get(cuitStr);
+    // b) Fallback fuzzy (CUITs en notación científica de Sheets)
     if (cuitStr.toLowerCase().includes('e')) {
       const parsed = parseFloat(cuitStr);
       if (!isNaN(parsed)) {
         const truncStr = String(Math.trunc(parsed));
-        ktKv = fuzzyCuitMap[truncStr.slice(0, 10)];
+        const mapVal = _bcfullMap.get(truncStr.slice(0, 10));
+        if (mapVal) return mapVal;
+        const fuzzyKtKv = fuzzyCuitMap[truncStr.slice(0, 10)];
+        if (fuzzyKtKv) return fuzzyKtKv;
       }
     }
-    return ktKv || { kt: '-', kv: '-' };
+    // c) auxLeads como fallback si Q221 no tiene el CUIT
+    const auxKtKv = cuitKtKvMap[cuitStr];
+    if (auxKtKv) return auxKtKv;
+    return { kt: '-', kv: '-' };
   }
 
   // ── BASE ──
   const socOf = {};
   let cabConcBase = 0, cabNoConcBase = 0, cabCotizadasCcc = 0;
+  let rendOfSumW = 0, rendOfCabW = 0; // para promedio ponderado rend ofrecidas
   const seenBaseId = {};
 
   for (let i = 0; i < D.base.length; i++) {
@@ -592,6 +709,8 @@ async function getReport(ac, startTs, endTs, opts) {
       if (row[8]) cabNoConcBase += row[4];
       if (row[6] || row[7]) r.cabPublicadas += row[4];
       if ((row[5] || row[8]) && row[9]) cabCotizadasCcc += row[4];
+      // Rend ponderado: solo CONCRETADAS con rend != 0
+      if (row[5] && row[16]) { rendOfSumW += row[16] * row[4]; rendOfCabW += row[4]; }
       if (row[3]) socOf[row[3]] = 1;
       if (row[2] >= 0) r.dT[row[2]]++;
 
@@ -612,6 +731,7 @@ async function getReport(ac, startTs, endTs, opts) {
         kv: dataOf.kv,
         est: row[5] ? 'C' : (row[8] ? 'NC' : (row[6] ? 'P' : (row[7] ? 'O' : '-'))),
         cot: row[9] || 0,
+        rend: row[5] ? (row[16] || 0) : 0, // rend solo para CONCRETADAS
       });
     }
     if (inA(f)) { r.pCab += row[4]; r.pTrop++; }
@@ -623,6 +743,7 @@ async function getReport(ac, startTs, endTs, opts) {
   const seenS = {}, seenA = {}, seenM = {}, seenMPrev = {};
   const seenSemMes = semMes.map(() => ({}));
   const seenPrevSem = {}, seenCWeek = {}, seenOpsId = {};
+  let rendCompSumW = 0, rendCompCabW = 0; // para promedio ponderado rend compradas
 
   for (let i = 0; i < D.ops.length; i++) {
     const row = D.ops[i];
@@ -681,19 +802,16 @@ async function getReport(ac, startTs, endTs, opts) {
         if (row[6]) socCompraWeek[row[6]] = 1;
         const cuitC = String(row[15] || '').trim();
         const dataC = getKtKv(cuitC);
-        r.detC.push({ id: row[8], un: row[9], soc: row[6], fecha: row[7], q: row[4], kt: dataC.kt, kv: dataC.kv });
+        r.detC.push({ id: row[8], un: row[9], soc: row[6], fecha: row[7], q: row[4], kt: dataC.kt, kv: dataC.kv, rend: row[20] || 0 });
+        // Rend ponderado compradas
+        if (row[20]) { rendCompSumW += row[20] * row[4]; rendCompCabW += row[4]; }
       }
-      // El Kt/Kv mostrado en "Top Negocios" corresponde al cliente del AC.
-      // Si el AC es Vendedor (isV), mostramos el Kt/Kv del Vendedor (cuitV).
-      // Si el AC es Comprador (isC), mostramos el Kt/Kv del Comprador (cuitC).
-      const cuitLookup = isV
-        ? String(row[14] || '').trim() // cuitV
-        : String(row[15] || '').trim(); // cuitC
-
-      const ktKv = getKtKv(cuitLookup);
+      // Siempre calcular kt/kv para AMBOS lados: vendedor y comprador
+      const ktKvV = getKtKv(String(row[14] || '').trim()); // cuitV → vendedora
+      const ktKvC = getKtKv(String(row[15] || '').trim()); // cuitC → compradora
       const tieneCargar = isCargForAc ? 'Sí' : '';
       const acLado = isV && isC ? 'vend/comp' : (isV ? 'vend' : 'comp');
-      allOps.push({ q: row[4], kt: ktKv.kt, kv: ktKv.kv, d: [row[8], row[9], row[5], row[0], row[6], row[1], row[7], row[4], tieneCargar, acLado] });
+      allOps.push({ q: row[4], kt: ktKvV.kt, kv: ktKvV.kv, ktC: ktKvC.kt, kvC: ktKvC.kv, rend: row[20] || 0, d: [row[8], row[9], row[5], row[0], row[6], row[1], row[7], row[4], tieneCargar, acLado] });
     }
     if (inA(f) && !seenA[opKey]) { seenA[opKey] = 1; r.pConc += row[4]; }
     if (inA(f) && isC) r.pCabC += row[4];
@@ -729,6 +847,10 @@ async function getReport(ac, startTs, endTs, opts) {
   r.cotizadas = (cabConcBase + cabNoConcBase) > 0
     ? Math.round(cabCotizadasCcc / (cabConcBase + cabNoConcBase) * 100) + '%'
     : '0%';
+  // Promedios ponderados de rendimiento (solo AC — el frontend decide si mostrar)
+  r.rendPonderadoOf   = rendOfCabW   > 0 ? rendOfSumW   / rendOfCabW   : 0;
+  r.rendPonderadoComp = rendCompCabW > 0 ? rendCompSumW / rendCompCabW : 0;
+
 
   // ── CRM (Comentarios + Agenda) ──
   const socGest = {}, pSocGest = {}, gestDia = [{}, {}, {}, {}, {}, {}, {}];
@@ -984,6 +1106,9 @@ async function getReport(ac, startTs, endTs, opts) {
   r.rankingOfrecidas = toRnk(rOfrec);
   r.rankingCompradas = toRnk(rComp);
   r.rankingOperadas = toRnk(rOper);
+
+  // Incluir timestamp del cache de Metabase para mostrarlo en el frontend
+  r.metaCacheTs = D.metaCacheTs || diskCache.getCacheTs() || Date.now();
 
   // ── Cachear y devolver ──
   cache.set(rKey, r, cache.TTL.REPORT);

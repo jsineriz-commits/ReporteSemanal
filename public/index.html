@@ -248,6 +248,42 @@
       background: #dbeafe;
     }
 
+    .cache-ts-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      align-self: center;
+      padding: 4px 10px 4px 8px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #15803d;
+      white-space: nowrap;
+      letter-spacing: -0.01em;
+      transition: opacity .2s;
+      cursor: default;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+    }
+
+    .cache-ts-badge:hover { opacity: .8; }
+
+    .rend-avg-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 1px 7px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #1d4ed8;
+      white-space: nowrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+    }
+
     .info-wrap {
       position: relative;
     }
@@ -820,11 +856,19 @@
     }
 
     .kt-tag-sm {
-      padding: 2px 4px;
+      display: inline-block;
+      font-weight: 600;
+      text-align: center;
+      padding: 2px 5px;
       font-size: 9px;
-      min-width: 28px;
+      min-width: 30px;
       border-radius: 4px;
+      background: #e5e7eb;
     }
+
+    /* Tabla Top Negocios con kt/kv doble */
+    .ops-dual-kt td, .ops-dual-kt th { padding: 5px 4px; }
+    .ops-dual-kt td:nth-child(7) { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
 
     .un-tag {
       padding: 2px 6px;
@@ -1104,6 +1148,10 @@
     <div class="cg"><label>Semana</label><select id="selSem" onchange="autoGen()"></select></div>
     <div class="mla" style="display:flex;gap:8px">
       <button class="btn b-refresh" id="btnRefresh" onclick="refreshToLatest()">Actualizar versión</button>
+      <span id="cacheTsBadge" class="cache-ts-badge" style="display:none" title="Fecha de carga de datos de Metabase">
+        <svg width="7" height="7" viewBox="0 0 8 8" fill="none" style="flex-shrink:0"><circle cx="4" cy="4" r="4" fill="#22c55e"/></svg>
+        <span>Última versión <span id="cacheTsText"></span></span>
+      </span>
       <div class="info-wrap">
         <button class="btn btn-info" id="btnGlossary" type="button" onclick="toggleGlossary(event)"
           aria-expanded="false" aria-controls="glossaryPanel" title="Glosario">i</button>
@@ -1198,6 +1246,18 @@
 
     function slo(on, txt) { eid('loader').classList.toggle('on', on); if (txt) eid('ltxt').textContent = txt; }
     function eid(id) { return document.getElementById(id); }
+
+    function updateCacheTs(ts) {
+      var badge = eid('cacheTsBadge'), span = eid('cacheTsText');
+      if (!badge || !span) return;
+      if (!ts) { badge.style.display = 'none'; return; }
+      var d = new Date(ts);
+      var pad = function(n) { return String(n).padStart(2,'0'); };
+      var str = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      span.textContent = str;
+      badge.style.display = 'inline-flex';
+      badge.title = 'Datos de Metabase del ' + d.toLocaleString('es-AR');
+    }
     function redrawCharts() {
       if (LAST_CHART_SERIES) {
         drawChart(LAST_CHART_SERIES.tr, LAST_CHART_SERIES.ca, LAST_CHART_SERIES.ge, LAST_CHART_SERIES.sa, LAST_CHART_SERIES.co);
@@ -1302,7 +1362,7 @@
       var ac = eid('selAC').value, sv = eid('selSem').value; updateNavBtns(); if (!ac || !sv) return;
       var cKey = ac + '_' + sv;
       eid('rpt').style.display = 'block'; eid('empty').style.display = 'none';
-      if (L_CACHE[cKey] && (Date.now() - L_CACHE[cKey].ts < 3600000)) { renderAll(L_CACHE[cKey].data, ac, sv); return; }
+      if (L_CACHE[cKey] && (Date.now() - L_CACHE[cKey].ts < 3600000)) { updateCacheTs(L_CACHE[cKey].data && L_CACHE[cKey].data.metaCacheTs); renderAll(L_CACHE[cKey].data, ac, sv); return; }
       showSkeletons();
       var p = sv.split('|');
       google.script.run
@@ -1311,7 +1371,7 @@
             eid('rpt').style.display = 'none'; eid('empty').style.display = '';
             eid('empty').innerHTML = '<div class="err-box"><b>Error:</b> ' + r.error + (r.ac ? ' (' + r.ac + ')' : '') + ' </div>'; return;
           }
-          L_CACHE[cKey] = { data: r, ts: Date.now() }; renderAll(r, ac, sv);
+          L_CACHE[cKey] = { data: r, ts: Date.now() }; updateCacheTs(r.metaCacheTs); renderAll(r, ac, sv);
         })
         .withFailureHandler(function (e) {
           eid('rpt').style.display = 'none'; eid('empty').style.display = '';
@@ -1413,6 +1473,15 @@
       var cabCompra = d.cabC || 0;
       var sacsCount = (d.sacs && d.sacs.length) ? d.sacs.length : 0;
       var hasSacs = sacsCount > 0;
+
+      // Solo ACs ven el rendimiento (no representantes)
+      var isACSelected = CFG.acs && CFG.acs.indexOf(eid('selAC').value) >= 0;
+      function fmtRendAvg(val) {
+        if (!val || val === 0) return '';
+        var pct = (val * 100).toFixed(1);
+        return ' &middot; <span class="rend-avg-badge" title="Promedio ponderado de rendimiento por cabezas">R&#x0304; ' + pct + '%</span>';
+      }
+
       eid('rpt-header').innerHTML =
         '<div class="rh"><div class="rht">' +
         '<div class="rt"><span class="dot"></span>Reporte Semanal — ' + ac + '</div>' +
@@ -1421,16 +1490,17 @@
       eid('kpi-of').innerHTML =
         '<div class="kl">Cabezas Ofrecidas</div>' +
         '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div><span class="chip cbl" style="padding:2px 8px; font-size:10px;">' + NN(d.cabPublicadas || 0) + ' siguen Publicadas/Ofrec.</span></div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
-        '<div class="kmeta">' + (d.trop || 0) + ' Tropas &middot; ' + (d.socOf || 0) + ' Sociedades &middot; <span style="color:' + getCccColor(d.ccc || '0%') + '; font-weight:700;">' + (d.ccc || '0%') + ' CCC</span> &middot; <span style="font-weight:700;">' + (d.cotizadas || '0%') + ' Cotizadas</span></div>';
+        '<div class="kmeta">' + (d.trop || 0) + ' Tropas &middot; ' + (d.socOf || 0) + ' Sociedades &middot; <span style="color:' + getCccColor(d.ccc || '0%') + '; font-weight:700;">' + (d.ccc || '0%') + ' CCC</span>' + (isACSelected ? fmtRendAvg(d.rendPonderadoOf) : '') + ' &middot; <span style="font-weight:700;">' + (d.cotizadas || '0%') + ' Cotizadas</span></div>';
       eid('kpi-of').style.cursor = 'pointer';
       eid('kpi-of').onclick = function () { showDetailPanel('of', d.detOf || []); };
 
       eid('kpi-conc').innerHTML =
         '<div class="kl">Cabezas Compradas</div>' +
         '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(cabCompra) + '</div></div><div class="ksplit">' + dc(cabCompra - (d.pCabC || 0)) + '</div></div>' +
-        '<div class="kmeta">' + (d.cabCWeekTrop || 0) + ' Tropas &middot; ' + (d.cabCSocCount || 0) + ' Sociedades</div>';
+        '<div class="kmeta">' + (d.cabCWeekTrop || 0) + ' Tropas &middot; ' + (d.cabCSocCount || 0) + ' Sociedades' + (isACSelected ? fmtRendAvg(d.rendPonderadoComp) : '') + '</div>';
       eid('kpi-conc').style.cursor = 'pointer';
       eid('kpi-conc').onclick = function () { showDetailPanel('comp', d.detC || []); };
+
       var sm = eid('sm-kpis').children;
       var top5Data = d.top5 || [];
       eid('ops-section').style.display = top5Data.length ? '' : 'none';
@@ -1644,17 +1714,41 @@
 
     function tblOps(ops) {
       if (!ops || !ops.length) return '<div class="empty-t">Sin operaciones esta semana</div>';
-      var h = '<table class="compact-table"><thead><tr><th>Kt</th><th>Kv</th><th>ID</th><th>UN</th><th>Soc. Vendedora</th><th>Fecha</th><th>Q</th><th>Soc. Compradora</th><th>Asist. Carga</th></tr></thead><tbody>';
+      var h = '<table class="compact-table ops-dual-kt">' +
+        '<thead><tr>' +
+        '<th style="width:38px">Kt</th><th style="width:38px">Kv</th>' +
+        '<th>ID</th><th>UN</th><th>Soc. Vendedora</th><th>Fecha</th>' +
+        '<th style="width:36px">Q</th>' +
+        '<th style="width:38px">Kt</th><th style="width:38px">Kv</th>' +
+        '<th>Soc. Compradora</th><th style="width:44px">Rend</th><th style="width:36px">Carga</th>' +
+        '</tr></thead><tbody>';
+
       ops.forEach(function (o) {
         var r = o.d;
-        h += '<tr><td><span class="kt-tag" style="background:' + getKtBgColor(o.kt) + ';color:' + getKtFgColor(o.kt) + '!important">' + fmtK(o.kt) + '</span></td>' +
-          '<td><span class="kt-tag" style="background:' + getKtBgColor(o.kv) + ';color:' + getKtFgColor(o.kv) + '!important">' + fmtK(o.kv) + '</span></td>' +
-          '<td>' + r[0] + '</td><td>' + renderUnTag(r[1], r[9]) + '</td><td class="tdb">' + r[2] + '</td>' +
-          '<td>' + r[6] + '</td><td style="font-weight:700">' + NN(r[7]) + '</td>' +
-          '<td class="tdb">' + (r[4] || '') + '</td><td>' + renderCarga(r[8]) + '</td></tr>';
+        var ktV = o.kt || '-'; var kvV = o.kv || '-';
+        var ktC = o.ktC || '-'; var kvC = o.kvC || '-';
+        var rendVal = o.rend || 0;
+        var rendPct = rendVal ? (rendVal * 100).toFixed(1) + '%' : '-';
+        var rendBg = rendVal > 0.02 ? '#f0fdf4' : rendVal > 0 ? '#fefce8' : rendVal < 0 ? '#fef2f2' : '#f3f4f6';
+        var rendFg = rendVal > 0.02 ? '#15803d' : rendVal > 0 ? '#854d0e' : rendVal < 0 ? '#dc2626' : '#6b7280';
+        h += '<tr>' +
+          '<td style="padding:4px 3px"><span class="kt-tag-sm" style="background:' + getKtBgColor(ktV) + ';color:' + getKtFgColor(ktV) + '!important">' + fmtK(ktV) + '</span></td>' +
+          '<td style="padding:4px 3px"><span class="kt-tag-sm" style="background:' + getKtBgColor(kvV) + ';color:' + getKtFgColor(kvV) + '!important">' + fmtK(kvV) + '</span></td>' +
+          '<td>' + r[0] + '</td>' +
+          '<td>' + renderUnTag(r[1], r[9]) + '</td>' +
+          '<td class="tdb">' + r[2] + '</td>' +
+          '<td>' + r[6] + '</td>' +
+          '<td style="font-weight:700;text-align:center">' + NN(r[7]) + '</td>' +
+          '<td style="padding:4px 3px"><span class="kt-tag-sm" style="background:' + getKtBgColor(ktC) + ';color:' + getKtFgColor(ktC) + '!important">' + fmtK(ktC) + '</span></td>' +
+          '<td style="padding:4px 3px"><span class="kt-tag-sm" style="background:' + getKtBgColor(kvC) + ';color:' + getKtFgColor(kvC) + '!important">' + fmtK(kvC) + '</span></td>' +
+          '<td class="tdb">' + (r[4] || '') + '</td>' +
+          '<td style="text-align:center;padding:3px 2px"><span style="display:inline-block;padding:2px 5px;border-radius:6px;font-size:10px;font-weight:600;background:' + rendBg + ';color:' + rendFg + '">' + rendPct + '</span></td>' +
+          '<td style="text-align:center">' + renderCarga(r[8]) + '</td>' +
+          '</tr>';
       });
       return h + '</tbody></table>';
     }
+
 
     function showDetailPanel(type, list) {
       var panel = eid('side-panel');
@@ -1686,8 +1780,8 @@
       list.sort(function (a, b) { return (b.q || 0) - (a.q || 0); });
 
       var headHtml = type === 'of'
-        ? '<tr><th style="width:10%">Kt</th><th style="width:10%">Kv</th><th style="width:30%">Sociedad</th><th style="width:18%">UN</th><th style="width:10%">Est</th><th style="width:8%">Cot</th><th style="width:14%">Q</th></tr>'
-        : '<tr><th style="width:12%">Kt</th><th style="width:12%">Kv</th><th style="width:37%">Sociedad</th><th style="width:20%">UN</th><th style="width:19%">Q</th></tr>';
+        ? '<tr><th style="width:10%">Kt</th><th style="width:10%">Kv</th><th style="width:28%">Sociedad</th><th style="width:15%">UN</th><th style="width:9%">Est</th><th style="width:8%">Cot</th><th style="width:10%">Rend</th><th style="width:10%">Q</th></tr>'
+        : '<tr><th style="width:12%">Kt</th><th style="width:12%">Kv</th><th style="width:35%">Sociedad</th><th style="width:18%">UN</th><th style="width:11%">Rend</th><th style="width:12%">Q</th></tr>';
 
       var h = '<style>' +
         '.detail-row { cursor: pointer; transition: background 0.2s; } ' +
@@ -1703,17 +1797,32 @@
         var ktTag = '<span class="kt-tag kt-tag-sm" style="background:' + getKtBgColor(item.kt) + ';color:' + getKtFgColor(item.kt) + '!important">' + fmtK(item.kt) + '</span>';
         var kvTag = '<span class="kt-tag kt-tag-sm" style="background:' + getKtBgColor(item.kv) + ';color:' + getKtFgColor(item.kv) + '!important">' + fmtK(item.kv) + '</span>';
 
-        var estTagHtml = '', cotHtml = '';
+        var rendVal = item.rend || 0;
+        var rendBadge = '';
+        if (rendVal !== 0) {
+          var pct = (rendVal * 100).toFixed(1) + '%';
+          var bg = rendVal > 0.02 ? '#f0fdf4' : rendVal > 0 ? '#fefce8' : '#fef2f2';
+          var fg = rendVal > 0.02 ? '#15803d' : rendVal > 0 ? '#854d0e' : '#dc2626';
+          rendBadge = '<span style="display:inline-block;padding:2px 5px;border-radius:6px;font-size:10px;font-weight:600;background:' + bg + ';color:' + fg + '">' + pct + '</span>';
+        } else {
+          rendBadge = '<span style="color:#9ca3af;font-size:10px">-</span>';
+        }
+        var estTagHtml = '', cotHtml = '', rendCellHtml = '';
         if (type === 'of') {
           var eC = '#e5e7eb', eT = '#374151'; // default gris
           if (item.est === 'C') { eC = '#d1fae5'; eT = '#065f46'; } // verde
           else if (item.est === 'NC') { eC = '#fee2e2'; eT = '#991b1b'; } // rojo
           else if (item.est === 'P') { eC = '#dbeafe'; eT = '#1e40af'; } // azul
           else if (item.est === 'O') { eC = '#fef3c7'; eT = '#92400e'; } // amarillo
-          estTagHtml = '<td><span style="display:inline-block; text-align:center; min-width: 18px; background:' + eC + ';color:' + eT + ';padding:2px 4px;border-radius:4px;font-size:9px;font-weight:700;">' + (item.est || '-') + '</span></td>';
+          estTagHtml = '<td>' + '<span style="display:inline-block; text-align:center; min-width: 18px; background:' + eC + ';color:' + eT + ';padding:2px 4px;border-radius:4px;font-size:9px;font-weight:700;">' + (item.est || '-') + '</span></td>';
 
           var isCot = Number(item.cot) === 1;
           cotHtml = '<td>' + (isCot ? '<span style="color:#16a34a;font-weight:700">✓</span>' : '<span style="color:#dc2626;font-weight:700">✗</span>') + '</td>';
+          // Para ofrecidas, rend solo si CONCRETADA
+          rendCellHtml = item.est === 'C' ? '<td style="padding:3px 2px">' + rendBadge + '</td>' : '<td style="color:#9ca3af;font-size:10px;text-align:center">-</td>';
+        } else {
+          // Compradas: siempre mostrar rend
+          rendCellHtml = '<td style="padding:3px 2px">' + rendBadge + '</td>';
         }
 
         h += '<tr class="detail-row" onclick="this.classList.toggle(\'expanded\')">' +
@@ -1726,6 +1835,7 @@
           '<td>' + renderUnTag(item.un, (type === 'ops' ? item.lado : null), true) + '</td>' +
           estTagHtml +
           cotHtml +
+          rendCellHtml +
           '<td style="font-weight:700">' + NN(item.q) + '</td>' +
           '</tr>';
       });

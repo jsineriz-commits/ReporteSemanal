@@ -1,0 +1,16 @@
+.vercel
+.env*.local
+node_modules/
+metabase_data_cache.json
+build_q101.js
+debug_q221.js
+debug_q221_v2.js
+fetch_q175.js
+q101_modified.sql
+q101_original.sql
+q102_modified.sql
+q102_original.sql
+update_q101.js
+update_q102.js
+old_logic.js
+test_headers.js
