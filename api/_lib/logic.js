@@ -847,6 +847,8 @@ async function getReport(ac, startTs, endTs, opts) {
   r.cotizadas = (cabConcBase + cabNoConcBase) > 0
     ? Math.round(cabCotizadasCcc / (cabConcBase + cabNoConcBase) * 100) + '%'
     : '0%';
+  r.cabConc   = cabConcBase;
+  r.cabNoConc = cabNoConcBase;
   // Promedios ponderados de rendimiento (solo AC — el frontend decide si mostrar)
   r.rendPonderadoOf   = rendOfCabW   > 0 ? rendOfSumW   / rendOfCabW   : 0;
   r.rendPonderadoComp = rendCompCabW > 0 ? rendCompSumW / rendCompCabW : 0;

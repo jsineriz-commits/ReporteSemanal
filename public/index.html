@@ -1482,9 +1482,15 @@
         '<div class="rt"><span class="dot"></span>Reporte Semanal — ' + ac + '</div>' +
         '<div class="rmeta"><span class="mt">SEMANA ' + sem + ' &middot; ' + anio + '</span><span class="mt">' + fD(sT) + ' al ' + fD(eT) + '</span></div>' +
         '</div></div>';
+      var concChips =
+        '<div style="display:flex;flex-direction:column;gap:3px;margin-left:8px;justify-content:center;">' +
+        '<span style="display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:600;background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;white-space:nowrap;">' + NN(d.cabPublicadas || 0) + ' Publicadas/Ofrec.</span>' +
+        ((d.cabConc || 0) > 0 ? '<span style="display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:600;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;white-space:nowrap;">' + NN(d.cabConc) + ' Concretadas</span>' : '') +
+        ((d.cabNoConc || 0) > 0 ? '<span style="display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:600;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;white-space:nowrap;">' + NN(d.cabNoConc) + ' No Concretadas</span>' : '') +
+        '</div>';
       eid('kpi-of').innerHTML =
         '<div class="kl">Cabezas Ofrecidas</div>' +
-        '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div><span class="chip cbl" style="padding:2px 8px; font-size:10px;">' + NN(d.cabPublicadas || 0) + ' siguen Publicadas/Ofrec.</span></div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
+        '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div>' + concChips + '</div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
         '<div class="kmeta">' + (d.trop || 0) + ' Tropas &middot; ' + (d.socOf || 0) + ' Sociedades &middot; <span style="color:' + getCccColor(d.ccc || '0%') + '; font-weight:700;">' + (d.ccc || '0%') + ' CCC</span> &middot; <span style="font-weight:700;">' + (d.cotizadas || '0%') + ' Cotizadas</span></div>';
       eid('kpi-of').style.cursor = 'pointer';
       eid('kpi-of').onclick = function () { showDetailPanel('of', d.detOf || []); };
