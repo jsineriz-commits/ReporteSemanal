@@ -7,16 +7,16 @@ const { fetchMetabaseQuery } = require('./metabase');
 const cache = require('./cache');
 const props = require('./props');
 const diskCache = require('./metaDiskCache');
-const redisCache = require('./redisCache');
+const blobCache = require('./blobCache');
 
 // ─── bcfull: mapa módulo-level cargado en background desde Metabase Q221 ───────────────
-const _bcfullMap  = new Map(); // cuit → { kt: bovinos, kv: vaca }
-let   _bcfullState = 'idle';   // 'idle' | 'loading' | 'done' | 'error'
+const _bcfullMap = new Map(); // cuit → { kt: bovinos, kv: vaca }
+let _bcfullState = 'idle';   // 'idle' | 'loading' | 'done' | 'error'
 
 function _buildBcfullMap(metaEstab) {
-  const h     = metaEstab.headers || [];
+  const h = metaEstab.headers || [];
   const iCuit = h.indexOf('cuit_titular_est');
-  const iBov  = h.indexOf('bovinos');
+  const iBov = h.indexOf('bovinos');
   const iVaca = h.indexOf('vaca');
   if (iCuit < 0 || iBov < 0 || iVaca < 0) {
     console.error('[bcfull] Q221: columnas no encontradas. headers=', h);
@@ -48,7 +48,7 @@ function _ensureBcfull(cachedEstab) {
       _buildBcfullMap(cachedEstab);
       _bcfullState = 'done';
       console.log('[bcfull] cargado desde disk cache');
-    } catch(e) {
+    } catch (e) {
       console.error('[bcfull] error al cargar desde disk cache:', e.message);
       _bcfullState = 'idle';
     }
@@ -204,88 +204,63 @@ async function getConfig() {
 
 // ─── loadData ─────────────────────────────────────────────────────────────────
 // Lee las 9 hojas en paralelo y construye los arrays de datos.
-// forceRefresh=true: ignora todos los caches y recarga desde Metabase.
 async function loadData(forceRefresh) {
   const cached = cache.get('data');
   if (cached && !forceRefresh) return cached;
 
-  const useRedis = redisCache.isConfigured();
+  const useBlob = blobCache.isConfigured();
 
-  // ── 1. Redis cache (producción / Vercel) ──────────────────────────────────
-  if (useRedis && !forceRefresh) {
-    const red = await redisCache.readCache();
+  // ── 1. Blob cache (Vercel producción) ─────────────────────────────────────
+  if (useBlob && !forceRefresh) {
+    const red = await blobCache.readCache();
     if (red && red.metaBase && red.metaOps && red.bcMapObj) {
-      console.log('[logic] loadData: usando Redis cache');
-      // Restaurar bcfullMap desde el objeto cacheado
+      console.log('[logic] loadData: usando Blob cache');
       _bcfullMap.clear();
-      for (const [cuit, val] of Object.entries(red.bcMapObj)) {
-        _bcfullMap.set(cuit, val);
-      }
+      for (const [cuit, val] of Object.entries(red.bcMapObj)) _bcfullMap.set(cuit, val);
       _bcfullState = 'done';
       const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
-        getSheetData('Comentarios_CRM'),
-        getSheetData('Agenda_CRM'),
-        getSheetData('Leads_CRM'),
-        getSheetData('aux leads'),
-        getSheetData('SAC'),
-        getSheetData('REMATES'),
+        getSheetData('Comentarios_CRM'), getSheetData('Agenda_CRM'), getSheetData('Leads_CRM'),
+        getSheetData('aux leads'), getSheetData('SAC'), getSheetData('REMATES'),
       ]);
       return _processLoadData(red.metaBase, red.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, red.ts);
     }
   }
 
-  // ── 2. Disk cache (local dev, sin Redis) ──────────────────────────────────
-  if (!useRedis && !forceRefresh) {
+  // ── 2. Disk cache (local dev) ──────────────────────────────────────────────
+  if (!useBlob && !forceRefresh) {
     const disk = diskCache.readCache();
     if (disk && disk.metaBase && disk.metaOps) {
-      console.log('[logic] loadData: usando disk cache para Q101+Q102');
+      console.log('[logic] loadData: usando disk cache');
       _ensureBcfull(disk.metaEstab || null);
       const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
-        getSheetData('Comentarios_CRM'),
-        getSheetData('Agenda_CRM'),
-        getSheetData('Leads_CRM'),
-        getSheetData('aux leads'),
-        getSheetData('SAC'),
-        getSheetData('REMATES'),
+        getSheetData('Comentarios_CRM'), getSheetData('Agenda_CRM'), getSheetData('Leads_CRM'),
+        getSheetData('aux leads'), getSheetData('SAC'), getSheetData('REMATES'),
       ]);
       return _processLoadData(disk.metaBase, disk.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, disk.ts);
     }
   }
 
-  // ── 3. Fetch fresco desde Metabase ───────────────────────────────────────
-  console.log('[logic] loadData: cargando BASE/OPS/Q221 desde Metabase + 6 hojas de Sheets...');
-  const [
-    metaBaseFetched, metaOpsFetched, metaEstabFetched, comsRaw, agendasRaw,
-    leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw,
-  ] = await Promise.all([
-    fetchMetabaseQuery(101),
-    fetchMetabaseQuery(102),
-    fetchMetabaseQuery(221),
-    getSheetData('Comentarios_CRM'),
-    getSheetData('Agenda_CRM'),
-    getSheetData('Leads_CRM'),
-    getSheetData('aux leads'),
-    getSheetData('SAC'),
-    getSheetData('REMATES'),
+  // ── 3. Fetch fresco desde Metabase ────────────────────────────────────────
+  console.log('[logic] loadData: fetch fresco Q101+Q102+Q221 + Sheets...');
+  const [metaBase, metaOps, metaEstab, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
+    fetchMetabaseQuery(101), fetchMetabaseQuery(102), fetchMetabaseQuery(221),
+    getSheetData('Comentarios_CRM'), getSheetData('Agenda_CRM'), getSheetData('Leads_CRM'),
+    getSheetData('aux leads'), getSheetData('SAC'), getSheetData('REMATES'),
   ]);
 
-  // Construir bcfullMap
   _bcfullMap.clear();
-  _buildBcfullMap(metaEstabFetched);
+  _buildBcfullMap(metaEstab);
   _bcfullState = 'done';
-
-  // Serializar bcfullMap para guardarlo en cache
   const bcMapObj = Object.fromEntries(_bcfullMap);
 
-  // Guardar en Redis (producción) o disco (local)
   let savedTs;
-  if (useRedis) {
-    savedTs = await redisCache.writeCache(metaBaseFetched, metaOpsFetched, bcMapObj);
+  if (useBlob) {
+    savedTs = await blobCache.writeCache(metaBase, metaOps, bcMapObj);
   } else {
-    savedTs = diskCache.writeCache({ metaBase: metaBaseFetched, metaOps: metaOpsFetched, metaEstab: metaEstabFetched });
+    savedTs = diskCache.writeCache({ metaBase, metaOps, metaEstab });
   }
 
-  return _processLoadData(metaBaseFetched, metaOpsFetched, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, savedTs || Date.now());
+  return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, savedTs || Date.now());
 }
 
 // ─── _processLoadData ─────────────────────────────────────────────────────────
@@ -307,7 +282,7 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     un: bMap['un'] ?? bMap['unidad_negocio'] ?? 7,
     repVend: bMap['repre_vendedor'] ?? bMap['repre vendedor'] ?? bMap['repre_vend'] ?? bMap['representante'] ?? 20,
     repComp: bMap['repre_comprador'] ?? bMap['repre comprador'] ?? bMap['repre_comp'] ?? 21,
-    rend:    bMap['rend'] ?? -1,
+    rend: bMap['rend'] ?? -1,
   };
   console.log('[logic] BASE (Q101): headers=', metaBase.headers, '| filas=', (metaBase.rows || []).length, '| idxB=', idxB);
   (metaBase.rows || []).forEach(row => {
@@ -507,7 +482,7 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
 
   const data = { base, ops, coms, agendas, leads, auxLeads, sacs, remates, metaCacheTs: metaCacheTs || Date.now() };
   cache.set('data', data, cache.TTL.DATA);
-  console.log(`[logic] _processLoadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} metaCacheTs=${new Date(metaCacheTs||0).toISOString()} completado.`);
+  console.log(`[logic] _processLoadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} metaCacheTs=${new Date(metaCacheTs || 0).toISOString()} completado.`);
   return data;
 }
 
@@ -554,12 +529,9 @@ function debugCacheStatus(ac, startTs, endTs) {
 
 // ─── refreshCacheAndWarmup ───────────────────────────────────────────────────
 async function refreshCacheAndWarmup(ac, startTs, endTs) {
-  // Limpiar cache de reportes en memoria
   const clearMsg = clearCache();
-  // Limpiar Redis (si está configurado) para forzar reload desde Metabase
-  await redisCache.deleteCache();
-  // Recargar datos frescos de Metabase con forceRefresh=true
-  const warm = await warmup(true);
+  await blobCache.deleteCache(); // borra Blob (no-op si no configurado)
+  const warm = await warmup(true); // forceRefresh desde Metabase
   const status = debugCacheStatus(ac, startTs, endTs);
   return { ok: true, clear: clearMsg, warmup: warm, status };
 }
@@ -882,10 +854,10 @@ async function getReport(ac, startTs, endTs, opts) {
   r.cotizadas = (cabConcBase + cabNoConcBase) > 0
     ? Math.round(cabCotizadasCcc / (cabConcBase + cabNoConcBase) * 100) + '%'
     : '0%';
-  r.cabConc   = cabConcBase;
+  r.cabConc = cabConcBase;
   r.cabNoConc = cabNoConcBase;
   // Promedios ponderados de rendimiento (solo AC — el frontend decide si mostrar)
-  r.rendPonderadoOf   = rendOfCabW   > 0 ? rendOfSumW   / rendOfCabW   : 0;
+  r.rendPonderadoOf = rendOfCabW > 0 ? rendOfSumW / rendOfCabW : 0;
   r.rendPonderadoComp = rendCompCabW > 0 ? rendCompSumW / rendCompCabW : 0;
 
 
