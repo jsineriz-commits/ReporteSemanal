@@ -1476,11 +1476,6 @@
 
       // Solo ACs ven el rendimiento (no representantes)
       var isACSelected = CFG.acs && CFG.acs.indexOf(eid('selAC').value) >= 0;
-      function fmtRendAvg(val) {
-        if (!val || val === 0) return '';
-        var pct = (val * 100).toFixed(1);
-        return ' &middot; <span class="rend-avg-badge" title="Promedio ponderado de rendimiento por cabezas">R&#x0304; ' + pct + '%</span>';
-      }
 
       eid('rpt-header').innerHTML =
         '<div class="rh"><div class="rht">' +
@@ -1490,14 +1485,14 @@
       eid('kpi-of').innerHTML =
         '<div class="kl">Cabezas Ofrecidas</div>' +
         '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(d.cab) + '</div><span class="chip cbl" style="padding:2px 8px; font-size:10px;">' + NN(d.cabPublicadas || 0) + ' siguen Publicadas/Ofrec.</span></div><div class="ksplit">' + dc((d.cab || 0) - (d.pCab || 0)) + '</div></div>' +
-        '<div class="kmeta">' + (d.trop || 0) + ' Tropas &middot; ' + (d.socOf || 0) + ' Sociedades &middot; <span style="color:' + getCccColor(d.ccc || '0%') + '; font-weight:700;">' + (d.ccc || '0%') + ' CCC</span>' + (isACSelected ? fmtRendAvg(d.rendPonderadoOf) : '') + ' &middot; <span style="font-weight:700;">' + (d.cotizadas || '0%') + ' Cotizadas</span></div>';
+        '<div class="kmeta">' + (d.trop || 0) + ' Tropas &middot; ' + (d.socOf || 0) + ' Sociedades &middot; <span style="color:' + getCccColor(d.ccc || '0%') + '; font-weight:700;">' + (d.ccc || '0%') + ' CCC</span> &middot; <span style="font-weight:700;">' + (d.cotizadas || '0%') + ' Cotizadas</span></div>';
       eid('kpi-of').style.cursor = 'pointer';
       eid('kpi-of').onclick = function () { showDetailPanel('of', d.detOf || []); };
 
       eid('kpi-conc').innerHTML =
         '<div class="kl">Cabezas Compradas</div>' +
         '<div class="kvrow"><div class="kvlead"><div class="kv">' + NN(cabCompra) + '</div></div><div class="ksplit">' + dc(cabCompra - (d.pCabC || 0)) + '</div></div>' +
-        '<div class="kmeta">' + (d.cabCWeekTrop || 0) + ' Tropas &middot; ' + (d.cabCSocCount || 0) + ' Sociedades' + (isACSelected ? fmtRendAvg(d.rendPonderadoComp) : '') + '</div>';
+        '<div class="kmeta">' + (d.cabCWeekTrop || 0) + ' Tropas &middot; ' + (d.cabCSocCount || 0) + ' Sociedades</div>';
       eid('kpi-conc').style.cursor = 'pointer';
       eid('kpi-conc').onclick = function () { showDetailPanel('comp', d.detC || []); };
 
@@ -1780,8 +1775,8 @@
       list.sort(function (a, b) { return (b.q || 0) - (a.q || 0); });
 
       var headHtml = type === 'of'
-        ? '<tr><th style="width:10%">Kt</th><th style="width:10%">Kv</th><th style="width:28%">Sociedad</th><th style="width:15%">UN</th><th style="width:9%">Est</th><th style="width:8%">Cot</th><th style="width:10%">Rend</th><th style="width:10%">Q</th></tr>'
-        : '<tr><th style="width:12%">Kt</th><th style="width:12%">Kv</th><th style="width:35%">Sociedad</th><th style="width:18%">UN</th><th style="width:11%">Rend</th><th style="width:12%">Q</th></tr>';
+        ? '<tr><th style="width:10%">Kt</th><th style="width:10%">Kv</th><th style="width:32%">Sociedad</th><th style="width:18%">UN</th><th style="width:10%">Est</th><th style="width:8%">Cot</th><th style="width:12%">Q</th></tr>'
+        : '<tr><th style="width:12%">Kt</th><th style="width:12%">Kv</th><th style="width:40%">Sociedad</th><th style="width:20%">UN</th><th style="width:16%">Q</th></tr>';
 
       var h = '<style>' +
         '.detail-row { cursor: pointer; transition: background 0.2s; } ' +
@@ -1798,31 +1793,22 @@
         var kvTag = '<span class="kt-tag kt-tag-sm" style="background:' + getKtBgColor(item.kv) + ';color:' + getKtFgColor(item.kv) + '!important">' + fmtK(item.kv) + '</span>';
 
         var rendVal = item.rend || 0;
-        var rendBadge = '';
-        if (rendVal !== 0) {
-          var pct = (rendVal * 100).toFixed(1) + '%';
-          var bg = rendVal > 0.02 ? '#f0fdf4' : rendVal > 0 ? '#fefce8' : '#fef2f2';
-          var fg = rendVal > 0.02 ? '#15803d' : rendVal > 0 ? '#854d0e' : '#dc2626';
-          rendBadge = '<span style="display:inline-block;padding:2px 5px;border-radius:6px;font-size:10px;font-weight:600;background:' + bg + ';color:' + fg + '">' + pct + '</span>';
-        } else {
-          rendBadge = '<span style="color:#9ca3af;font-size:10px">-</span>';
-        }
-        var estTagHtml = '', cotHtml = '', rendCellHtml = '';
+        var rendStr = rendVal !== 0 ? (rendVal * 100).toFixed(1) + '%' : '';
+        var rendColor = rendVal > 0.02 ? '#15803d' : rendVal > 0 ? '#854d0e' : rendVal < 0 ? '#dc2626' : '';
+        var rendExtra = rendStr
+          ? '<br><b>Rend:</b> <span style="font-weight:700;color:' + rendColor + '">' + rendStr + '</span>'
+          : '';
+        var estTagHtml = '', cotHtml = '';
         if (type === 'of') {
           var eC = '#e5e7eb', eT = '#374151'; // default gris
           if (item.est === 'C') { eC = '#d1fae5'; eT = '#065f46'; } // verde
           else if (item.est === 'NC') { eC = '#fee2e2'; eT = '#991b1b'; } // rojo
           else if (item.est === 'P') { eC = '#dbeafe'; eT = '#1e40af'; } // azul
           else if (item.est === 'O') { eC = '#fef3c7'; eT = '#92400e'; } // amarillo
-          estTagHtml = '<td>' + '<span style="display:inline-block; text-align:center; min-width: 18px; background:' + eC + ';color:' + eT + ';padding:2px 4px;border-radius:4px;font-size:9px;font-weight:700;">' + (item.est || '-') + '</span></td>';
+          estTagHtml = '<td><span style="display:inline-block; text-align:center; min-width: 18px; background:' + eC + ';color:' + eT + ';padding:2px 4px;border-radius:4px;font-size:9px;font-weight:700;">' + (item.est || '-') + '</span></td>';
 
           var isCot = Number(item.cot) === 1;
           cotHtml = '<td>' + (isCot ? '<span style="color:#16a34a;font-weight:700">✓</span>' : '<span style="color:#dc2626;font-weight:700">✗</span>') + '</td>';
-          // Para ofrecidas, rend solo si CONCRETADA
-          rendCellHtml = item.est === 'C' ? '<td style="padding:3px 2px">' + rendBadge + '</td>' : '<td style="color:#9ca3af;font-size:10px;text-align:center">-</td>';
-        } else {
-          // Compradas: siempre mostrar rend
-          rendCellHtml = '<td style="padding:3px 2px">' + rendBadge + '</td>';
         }
 
         h += '<tr class="detail-row" onclick="this.classList.toggle(\'expanded\')">' +
@@ -1830,12 +1816,11 @@
           '<td>' + kvTag + '</td>' +
           '<td class="tdb">' +
           '<div class="soc-main" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + item.soc + '</div>' +
-          '<div class="detail-extra"><b>Soc:</b> ' + item.soc + '<br><b>Fec:</b> ' + (item.fecha || '-') + '<br><b>ID:</b> ' + (item.id || '-') + '</div>' +
+          '<div class="detail-extra"><b>Soc:</b> ' + item.soc + '<br><b>Fec:</b> ' + (item.fecha || '-') + '<br><b>ID:</b> ' + (item.id || '-') + rendExtra + '</div>' +
           '</td>' +
           '<td>' + renderUnTag(item.un, (type === 'ops' ? item.lado : null), true) + '</td>' +
           estTagHtml +
           cotHtml +
-          rendCellHtml +
           '<td style="font-weight:700">' + NN(item.q) + '</td>' +
           '</tr>';
       });
