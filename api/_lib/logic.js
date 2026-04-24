@@ -827,7 +827,7 @@ async function getReport(ac, startTs, endTs, opts) {
         const cuitLkp = String(row[14] || '').trim();
         const ktkvW = getKtKv(cuitLkp);
         const l = isV && isC ? 'vend/comp' : (isV ? 'vend' : 'comp');
-        r.operSemMesDets[w].push({ id: row[8], un: row[9], soc: String(row[5] || row[6] || '-'), fecha: row[7], q: row[4], kt: ktkvW.kt, kv: ktkvW.kv, lado: l });
+        r.operSemMesDets[w].push({ id: row[8], un: row[9], soc: String(row[5] || row[6] || '-'), fecha: row[7], q: row[4], kt: ktkvW.kt, kv: ktkvW.kv, lado: l, rend: Number(row[20]) || 0 });
       }
       break;
     }
