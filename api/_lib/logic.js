@@ -230,14 +230,15 @@ async function loadData() {
     return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, disk.ts);
   }
 
-  console.log('[logic] loadData: cache miss, cargando BASE/OPS desde Metabase + 6 hojas de Sheets...');
+  console.log('[logic] loadData: cache miss, cargando BASE/OPS/Q221 desde Metabase + 6 hojas de Sheets...');
 
   const [
-    metaBaseFetched, metaOpsFetched, comsRaw, agendasRaw,
+    metaBaseFetched, metaOpsFetched, metaEstabFetched, comsRaw, agendasRaw,
     leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw,
   ] = await Promise.all([
     fetchMetabaseQuery(101),          // BASE  → Metabase Q101
     fetchMetabaseQuery(102),          // OPS   → Metabase Q102
+    fetchMetabaseQuery(221),          // BOVINOS/VACA → Metabase Q221 (kt/kv)
     getSheetData('Comentarios_CRM'),
     getSheetData('Agenda_CRM'),
     getSheetData('Leads_CRM'),
@@ -248,11 +249,12 @@ async function loadData() {
   metaBase = metaBaseFetched;
   metaOps  = metaOpsFetched;
 
-  // Guardar Q101+Q102 en disco (Q221 se agrega cuando termina su carga background)
-  const savedTs = diskCache.writeCache({ metaBase, metaOps });
+  // Construir bcfullMap sincrónicamente (ya tenemos los datos)
+  _buildBcfullMap(metaEstabFetched);
+  _bcfullState = 'done';
 
-  // Q221 (bovinos/vaca por CUIT) carga en background sin bloquear el reporte
-  _ensureBcfull();
+  // Guardar Q101+Q102+Q221 en disco
+  const savedTs = diskCache.writeCache({ metaBase, metaOps, metaEstab: metaEstabFetched });
 
   return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, savedTs || Date.now());
 }
