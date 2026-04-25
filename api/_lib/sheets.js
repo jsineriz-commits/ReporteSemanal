@@ -59,6 +59,24 @@ async function getSheetData(sheetName) {
   }
 }
 
+async function getSheetDataFrom(spreadsheetId, sheetName) {
+  const auth   = await getAuthClient();
+  const sheets = google.sheets({ version: 'v4', auth });
+  const quoted = sheetName.includes(' ') ? `'${sheetName}'` : sheetName;
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range:             quoted,
+      valueRenderOption: 'UNFORMATTED_VALUE',
+      dateTimeRenderOption: 'SERIAL_NUMBER',
+    });
+    return res.data.values || [];
+  } catch (e) {
+    console.error(`[sheets] getSheetDataFrom error ("${sheetName}" en ${spreadsheetId}):`, e.message);
+    return [];
+  }
+}
+
 /**
  * Acceso seguro a una celda (las filas pueden ser más cortas que el máximo).
  */
@@ -68,4 +86,6 @@ function g(row, idx, def) {
   return def !== undefined ? def : '';
 }
 
-module.exports = { getSheetData, g, getAuthClient, SPREADSHEET_ID };
+const CRM_SPREADSHEET_ID = process.env.CRM_SPREADSHEET_ID || '';
+
+module.exports = { getSheetData, getSheetDataFrom, g, getAuthClient, SPREADSHEET_ID, CRM_SPREADSHEET_ID };

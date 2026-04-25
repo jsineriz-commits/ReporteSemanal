@@ -2,7 +2,7 @@
 // Traducción completa de Code.gs (Reportes Semanales v7.1) a Node.js.
 // Mantiene la lógica idéntica al original.
 
-const { getSheetData, g } = require('./sheets');
+const { getSheetData, getSheetDataFrom, g, CRM_SPREADSHEET_ID } = require('./sheets');
 const { fetchMetabaseQuery } = require('./metabase');
 const cache = require('./cache');
 const props = require('./props');
@@ -218,11 +218,12 @@ async function loadData(forceRefresh) {
       _bcfullMap.clear();
       for (const [cuit, val] of Object.entries(red.bcMapObj)) _bcfullMap.set(cuit, val);
       _bcfullState = 'done';
-      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
-        getSheetData('Comentarios_CRM'), getSheetData('Agenda_CRM'), getSheetData('Leads_CRM'),
-        getSheetData('aux leads'), getSheetData('SAC'), getSheetData('REMATES'),
+      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw] = await Promise.all([
+        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
+        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
+        getSheetData('aux leads'), getSheetData('SAC'),
       ]);
-      return _processLoadData(red.metaBase, red.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, red.ts);
+      return _processLoadData(red.metaBase, red.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, red.ts);
     }
   }
 
@@ -232,20 +233,22 @@ async function loadData(forceRefresh) {
     if (disk && disk.metaBase && disk.metaOps) {
       console.log('[logic] loadData: usando disk cache');
       _ensureBcfull(disk.metaEstab || null);
-      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
-        getSheetData('Comentarios_CRM'), getSheetData('Agenda_CRM'), getSheetData('Leads_CRM'),
-        getSheetData('aux leads'), getSheetData('SAC'), getSheetData('REMATES'),
+      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw] = await Promise.all([
+        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
+        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
+        getSheetData('aux leads'), getSheetData('SAC'),
       ]);
-      return _processLoadData(disk.metaBase, disk.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, disk.ts);
+      return _processLoadData(disk.metaBase, disk.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, disk.ts);
     }
   }
 
   // ── 3. Fetch fresco desde Metabase ────────────────────────────────────────
   console.log('[logic] loadData: fetch fresco Q101+Q102+Q221 + Sheets...');
-  const [metaBase, metaOps, metaEstab, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw] = await Promise.all([
+  const [metaBase, metaOps, metaEstab, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw] = await Promise.all([
     fetchMetabaseQuery(101), fetchMetabaseQuery(102), fetchMetabaseQuery(221),
-    getSheetData('Comentarios_CRM'), getSheetData('Agenda_CRM'), getSheetData('Leads_CRM'),
-    getSheetData('aux leads'), getSheetData('SAC'), getSheetData('REMATES'),
+    getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
+    getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
+    getSheetData('aux leads'), getSheetData('SAC'),
   ]);
 
   _bcfullMap.clear();
@@ -260,12 +263,12 @@ async function loadData(forceRefresh) {
     savedTs = diskCache.writeCache({ metaBase, metaOps, metaEstab });
   }
 
-  return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, savedTs || Date.now());
+  return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, savedTs || Date.now());
 }
 
 // ─── _processLoadData ─────────────────────────────────────────────────────────
 // Procesa los datos raw de Metabase + Sheets y construye los arrays internos.
-async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, rematesRaw, metaCacheTs) {
+async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, metaCacheTs) {
   // ── BASE (Metabase Q101) ──
   const base = [];
   const bMap = {};
@@ -375,51 +378,65 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     ]);
   });
 
-  // ── COMENTARIOS CRM ──
-  // col A(0)=idLead, B(1)=soc, C(2)=mail AC, D(3)=fecha, E(4)=comentario
+  // ── COMENTARIOS CRM (fuente: CRM_v1 → hoja Comentarios) ──
+  // A(0)=ID Comentario, B(1)=ID Lead, C(2)=Título Lead, D(3)=AC Asignado, E(4)=Fecha, F(5)=Comentario, G(6)=Usuario
   const coms = [];
   comsRaw.slice(1).forEach(row => {
-    const mail = String(g(row, 2) || '').trim().toLowerCase(); if (!mail) return;
-    const f = toDateStr(g(row, 3)); if (!f) return;
+    const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return;
+    const f = toDateStr(g(row, 4)); if (!f) return;
     coms.push([
-      mail, f, toDayIdx(g(row, 3)),
-      g(row, 1) || '',    // 3 soc
-      1,                  // 4 esCom
-      'Comentario',       // 5 tipo
-      g(row, 4) || '',    // 6 comentario
-      String(g(row, 0) || ''), // 7 idLead
+      mail, f, toDayIdx(g(row, 4)),
+      g(row, 2) || '',             // 3 soc (Título Lead, col C)
+      1,                           // 4 esCom
+      'Comentario',                // 5 tipo
+      g(row, 5) || '',             // 6 comentario (col F)
+      String(g(row, 1) || ''),     // 7 idLead (col B)
     ]);
   });
 
-  // ── AGENDA CRM ──
-  // A(0)=ID Lead, B(1)=Titulo Lead (El usuario pidió esto como ID Lead), C(2)=Agendado por, D(3)=Fecha Agendado
+  // ── AGENDA CRM (fuente: CRM_v1 → hoja Agenda) ──
+  // A(0)=ID Tarea, B(1)=ID Lead, C(2)=Título Lead, D(3)=AC Asignado, E(4)=Fecha Inicio,
+  // F(5)=Fecha Fin, G(6)=Resumen Evento, H(7)=Descripción, I(8)=Agendado por, J(9)=Fecha Agendado
+  // Fecha de referencia (para ubicar en semana): J(9) Fecha Agendado
+  // Comentario: H(7) Descripción; si vacío → G(6) Resumen Evento
   const agendas = [];
   agendasRaw.slice(1).forEach(row => {
-    const mail = String(g(row, 2) || '').trim().toLowerCase(); if (!mail) return;
-    const originalDate = String(g(row, 3) || '').trim(); // Columna D
-    const f = toDateStr(originalDate); if (!f) return;
-    const fStr = f.length === 8 ? `${f.slice(6, 8)}/${f.slice(4, 6)}/${f.slice(0, 4)}` : originalDate;
-
+    const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return; // D=AC Asignado
+    const rawDate = g(row, 9); // J=Fecha Agendado (para ubicar en semana)
+    const f = toDateStr(rawDate); if (!f) return;
+    const fStr = f.length === 8 ? `${f.slice(6, 8)}/${f.slice(4, 6)}/${f.slice(0, 4)}` : String(rawDate || '');
+    const comentario = String(g(row, 7) || '').trim() || String(g(row, 6) || '').trim(); // H desc || G resumen
     agendas.push([
       mail,
       f,
-      toDayIdx(originalDate),
-      g(row, 1) || '',         // 3 soc (Titulo Lead, Col B)
-      fStr,                    // 4 comentario (fecha legible DD/MM/YYYY)
-      'Agenda',                // 5 tipo
-      String(g(row, 1) || ''), // 6 idLead (Titulo Lead, Col B)
+      toDayIdx(rawDate),
+      g(row, 2) || '',               // 3 soc (Título Lead, col C)
+      comentario || fStr,            // 4 descripción o resumen, fallback a fecha
+      'Agenda',                      // 5 tipo
+      String(g(row, 1) || ''),       // 6 idLead (ID Lead, col B)
     ]);
   });
 
-  // ── LEADS CRM ──
-  // col B(1)=fechaAsig, C(2)=mail, D(3)=fuente, L(11)=estado
+  // ── LEADS CRM (fuente: CRM_v1 → hoja Leads) ──
+  // A(0)=LeadID, B(1)=fechaAsig, C(2)=AC mail, D(3)=fuente,
+  // L(11)=CUIT Sociedad, M(12)=Razón Social, AH(33)=kt, AI(34)=kv, AL(37)=estado
   const leads = [];
   leadsRaw.slice(1).forEach(row => {
     const mail = String(g(row, 2) || '').trim().toLowerCase(); if (!mail) return;
-    if (String(g(row, 3) || '').trim() !== 'UA') return;
-    if (String(g(row, 11) || '').trim() === 'NO HABILITADO') return;
+    const estado = String(g(row, 37) || '').trim();
+    if (estado === 'NO HABILITADO') return;
     const f = toDateStr(g(row, 1)); if (!f) return;
-    leads.push([mail, f]);
+    leads.push([
+      mail,                          // 0 mail AC
+      f,                             // 1 fechaAsig (col B)
+      String(g(row, 3) || ''),       // 2 fuente (col D)
+      String(g(row, 0) || ''),       // 3 idLead (col A)
+      String(g(row, 11) || ''),      // 4 CUIT Sociedad (col L)
+      String(g(row, 12) || ''),      // 5 Razón Social (col M)
+      estado,                        // 6 estado (col AL)
+      String(g(row, 33) || ''),      // 7 kt (col AH)
+      String(g(row, 34) || ''),      // 8 kv (col AI)
+    ]);
   });
 
   // ── AUX LEADS ──
@@ -472,15 +489,7 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     ]);
   });
 
-  // ── REMATES ──
-  const remates = [];
-  rematesRaw.slice(1).forEach(row => {
-    const ac = norm(g(row, 2)); if (!ac) return;
-    const f = toDateStr(g(row, 1)); if (!f) return;
-    remates.push([ac, f, String(g(row, 3) || Math.random())]);
-  });
-
-  const data = { base, ops, coms, agendas, leads, auxLeads, sacs, remates, metaCacheTs: metaCacheTs || Date.now() };
+  const data = { base, ops, coms, agendas, leads, auxLeads, sacs, metaCacheTs: metaCacheTs || Date.now() };
   cache.set('data', data, cache.TTL.DATA);
   console.log(`[logic] _processLoadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} metaCacheTs=${new Date(metaCacheTs || 0).toISOString()} completado.`);
   return data;
@@ -633,7 +642,7 @@ async function getReport(ac, startTs, endTs, opts) {
     com: 0, age: 0, tSG: 0, pTSG: 0, dGestion: [0, 0, 0, 0, 0, 0, 0],
     nuevas: 0, pNuevas: 0, nuevasFuentes: {}, socSinGestNum: 0, pSocSinGestNum: 0, socSinGestAsigSem: 0,
     sacs: [], sacsTable: [], pSac: 0, sacAprob: 0, sacRech: 0, sacPend: 0,
-    rem: 0, pRem: 0, dSacs: [0, 0, 0, 0, 0, 0, 0],
+    rem: 0, dSacs: [0, 0, 0, 0, 0, 0, 0],
     top5: [], ssgTop5: [], actSemanal: [],
     detOf: [], detC: [], detCarg: [],
     operSemMesLabels: [], operSemMesVals: [], operSemMesDets: [], prevSemOperBase: 0,
@@ -666,12 +675,15 @@ async function getReport(ac, startTs, endTs, opts) {
     }
   }
 
-  // 1. Prioridad: aux leads (por CUIT en col AA = idx 12 del array procesado)
+  // Prioridad 1 (fallback de Q221): Leads CRM (cols AH/AI)
+  for (const lr of D.leads) {
+    if (lr[4]) addKtKv(lr[4], lr[7] || '-', lr[8] || '-'); // lr[4]=CUIT, lr[7]=kt, lr[8]=kv
+  }
+  // Prioridad 2 (último fallback): aux leads
   for (const row of D.auxLeads) {
     addKtKv(String(row[12] || '').trim(), row[4], row[5]);
   }
-  // 2. Complemento: _bcfullMap módulo-level (cargado en background desde Q221)
-  //    getKtKv lo consulta directamente — no necesita pre-cargar en cuitKtKvMap
+  // Q221 (_bcfullMap) se consulta directamente en getKtKv — siempre va primero
 
   function getKtKv(cuitStr) {
     // a) Q221 (bcfull) — fuente primaria: datos oficiales de Metabase
@@ -940,17 +952,9 @@ async function getReport(ac, startTs, endTs, opts) {
     const socKey = getLeadKey(row[16], row[6], 'aux:' + i);
 
     if (row[1] && inS(row[1])) {
-      asigSemSoc[socKey] = 1;
       if (!asigSemData[socKey] || row[1] > (asigSemData[socKey].fa || ''))
         asigSemData[socKey] = { kt: row[4], kv: row[5], soc: row[6], fa: row[1], sg: row[10], ug: row[11], w: row[8], fuente: row[13], asigSem: 1 };
-      const fuente = String(row[13] || '').trim().toUpperCase() || 'OTROS';
-      const sfKey = fuente + '|' + socKey;
-      if (!seenAsigSemFuenteSoc[sfKey]) {
-        seenAsigSemFuenteSoc[sfKey] = 1;
-        asigSemFuenteCount[fuente] = (asigSemFuenteCount[fuente] || 0) + 1;
-      }
     }
-    if (row[1] && inA(row[1])) asigPrevSoc[socKey] = 1;
 
     if (row[3]) {  // esNuevo
       socSinGestSet[socKey] = 1;
@@ -963,6 +967,23 @@ async function getReport(ac, startTs, endTs, opts) {
       if (!auxByLead[socKey] || row[1] > (auxByLead[socKey].fa || ''))
         auxByLead[socKey] = { kt: row[4], kv: row[5], fa: row[1], fuente: row[13], estado: row[15], cm: row[14], tipo: 'Asignación', soc: row[6], idLead: row[16] };
     }
+  }
+
+  // ── ASIG SEM / FUENTES desde CRM Leads (reemplaza aux leads para estas métricas) ──
+  for (let i = 0; i < D.leads.length; i++) {
+    const lr = D.leads[i];
+    if (lr[0] !== acMail) continue;
+    const lKey = getLeadKey(lr[3], lr[5], 'lead:' + i); // idLead, soc
+    if (lr[1] && inS(lr[1])) {
+      asigSemSoc[lKey] = 1;
+      const fuente = String(lr[2] || '').trim().toUpperCase() || 'OTROS';
+      const sfKey = fuente + '|' + lKey;
+      if (!seenAsigSemFuenteSoc[sfKey]) {
+        seenAsigSemFuenteSoc[sfKey] = 1;
+        asigSemFuenteCount[fuente] = (asigSemFuenteCount[fuente] || 0) + 1;
+      }
+    }
+    if (lr[1] && inA(lr[1])) asigPrevSoc[lKey] = 1;
   }
 
   // Incorporar asignadas sin gestión CRM
@@ -1028,12 +1049,40 @@ async function getReport(ac, startTs, endTs, opts) {
   r.tSGAsigSem = tsgAsig;
 
   // Top Soc. Gestionadas
+  // Mapas idLead → datos CRM (Leads sheet) para reemplazar aux leads en actSemanal
+  const leadFuenteMap = {}, leadCuitMap = {}, leadSocMap = {}, leadEstadoMap = {}, leadFechaMap = {};
+  for (const lr of D.leads) {
+    if (!lr[3]) continue;          // lr[3] = idLead
+    leadFuenteMap[lr[3]]  = lr[2]; // fuente
+    leadCuitMap[lr[3]]    = lr[4]; // CUIT Sociedad
+    leadSocMap[lr[3]]     = lr[5]; // Razón Social
+    leadEstadoMap[lr[3]]  = lr[6]; // estado
+    leadFechaMap[lr[3]]   = lr[1]; // fechaAsig
+  }
+
+
   const actArr = [];
   for (const crmKey of Object.keys(crmGestiones)) {
     const crm = crmGestiones[crmKey];
     const al = auxByLead[crmKey];
-    const sortFa = al ? al.fa : crm.f;
-    actArr.push({ kt: al ? al.kt : '-', kv: al ? al.kv : '-', soc: crm.soc || (al ? al.soc : '-') || '-', fa: crm.f, fuente: al ? al.fuente : '-', estado: al ? al.estado : '-', cm: crm.cm, tipo: crm.tipo, _sortFa: sortFa });
+    const iLead = crm.idLead || '';
+
+    // kt/kv: Q221 por CUIT del lead (CRM Leads), fallback aux leads
+    const cuit = leadCuitMap[iLead] || (al ? String(al.idLead ? '' : '') : '');
+    const ktkvQ221 = cuit ? getKtKv(cuit) : null;
+    const kt = (ktkvQ221 && ktkvQ221.kt !== '-') ? ktkvQ221.kt : (al ? al.kt : '-');
+    const kv = (ktkvQ221 && ktkvQ221.kv !== '-') ? ktkvQ221.kv : (al ? al.kv : '-');
+
+    // soc: CRM Leads (M), fallback crm.soc (Título Lead del comentario), fallback aux leads
+    const soc = leadSocMap[iLead] || crm.soc || (al ? al.soc : '-') || '-';
+
+    // fuente, estado, fechaAsig: CRM Leads, fallback aux leads
+    const fuente  = leadFuenteMap[iLead]  || (al ? al.fuente  : '-') || '-';
+    const estado  = leadEstadoMap[iLead]  || (al ? al.estado  : '-') || '-';
+    const fa      = leadFechaMap[iLead]   || crm.f;
+
+    const sortFa = fa || crm.f;
+    actArr.push({ kt, kv, soc, fa, fuente, estado, cm: crm.cm, tipo: crm.tipo, _sortFa: sortFa });
   }
   actArr.sort((a, b) => {
     if (!a._sortFa && !b._sortFa) return 0;
@@ -1059,15 +1108,6 @@ async function getReport(ac, startTs, endTs, opts) {
     if (inA(row[1])) r.pSac++;
   }
 
-  // ── REMATES ──
-  const remIds = {}, pRemIds = {};
-  for (const row of D.remates) {
-    if (row[0] !== acN) continue;
-    if (inS(row[1])) remIds[row[2]] = 1;
-    if (inA(row[1])) pRemIds[row[2]] = 1;
-  }
-  r.rem = Object.keys(remIds).length;
-  r.pRem = Object.keys(pRemIds).length;
 
   // ── RANKING GLOBAL ──
   const rOfrec = {}, rComp = {}, rOper = {};

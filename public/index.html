@@ -1612,14 +1612,10 @@
         '<tbody>' + ssgRows + '</tbody></table></div></div>'
         : '';
       var fuentes = d.nuevasFuentes || {};
-      var fOrder = ['UA', 'NR'];
-      var fParts = [];
-      for (var fi = 0; fi < fOrder.length; fi++) {
-        var fk = fOrder[fi];
-        if ((fuentes[fk] || 0) > 0) fParts.push((fuentes[fk] || 0) + ' ' + fk);
-      }
-      var extraKeys = Object.keys(fuentes).filter(function (k) { return fOrder.indexOf(k) < 0 && (fuentes[k] || 0) > 0; }).sort();
-      for (var ek = 0; ek < extraKeys.length; ek++) fParts.push((fuentes[extraKeys[ek]] || 0) + ' ' + extraKeys[ek]);
+      var fParts = Object.keys(fuentes)
+        .filter(function (k) { return (fuentes[k] || 0) > 0; })
+        .sort()
+        .map(function (k) { return (fuentes[k] || 0) + ' ' + k; });
       var asignMeta = fParts.join(' / ');
 
       eid('crm-section').innerHTML =
@@ -1638,7 +1634,6 @@
     function renderExtras(d) {
       var sm = eid('sm-kpis').children;
       var sacsCount = d.sacs ? d.sacs.length : 0;
-      var remCount = d.rem || 0;
       sm[0].innerHTML = ksmInnerCompact('Cargas Asistidas', d.carg || 0, (d.cargProp || 0) + ' Propias / ' + (d.cargAjen || 0) + ' Ajenas', dcSmall((d.carg || 0) - (d.pCarg || 0)));
       sm[0].style.cursor = 'pointer';
       sm[0].onclick = function () { showDetailPanel('carg', d.detCarg || []); };
