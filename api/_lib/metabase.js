@@ -45,8 +45,7 @@ async function fetchMetabaseQuery(questionId, opts) {
   const maxAttempts = (opts && opts.maxAttempts) ? opts.maxAttempts : 15;
   const auth = await getMetabaseAuth();
 
-  const params = new URLSearchParams();
-  params.append('parameters', '[]');
+  const body = JSON.stringify({ parameters: [] });
 
   let jsonArray = null;
   let attempts  = 0;
@@ -55,10 +54,10 @@ async function fetchMetabaseQuery(questionId, opts) {
     const res = await fetch(auth.baseUrl + `api/card/${questionId}/query/json`, {
       method:  'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
         ...auth.headers,
       },
-      body:   params.toString(),
+      body:   body,
       signal: AbortSignal.timeout(90000),
     });
 
