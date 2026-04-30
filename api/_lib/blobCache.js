@@ -37,7 +37,9 @@ async function readCache() {
     const age  = Date.now() - new Date(blob.uploadedAt).getTime();
     if (age > TTL_MS) { console.log(`[blobCache] Caducado (${Math.round(age/60000)}min)`); return null; }
     console.log(`[blobCache] Hit — datos de hace ${Math.round(age/60000)}min`);
-    const res = await fetch(blob.url);
+    // Blobs privados requieren auth — descargar vía endpoint autenticado
+    const downloadUrl = `${BLOB_API}?url=${encodeURIComponent(blob.url)}`;
+    const res = await fetch(downloadUrl, { headers: authHeaders() });
     if (!res.ok) throw new Error(`Blob fetch HTTP ${res.status}`);
     const raw = await gunzipAsync(Buffer.from(await res.arrayBuffer()));
     return JSON.parse(raw.toString('utf8'));
@@ -51,12 +53,13 @@ async function writeCache(metaBase, metaOps, bcMapObj) {
     const ts      = Date.now();
     const buf     = await gzipAsync(JSON.stringify({ ts, metaBase, metaOps, bcMapObj }));
     const mb      = (buf.length / 1048576).toFixed(1);
-    const res = await fetch(`${BLOB_API}/${CACHE_NAME}`, {
+    const res = await fetch(`${BLOB_API}/${CACHE_NAME}?access=private`, {
       method:  'PUT',
       headers: authHeaders({
-        'Content-Type':       'application/gzip',
+        'Content-Type':        'application/gzip',
         'x-add-random-suffix': '0',
         'x-cache-control-max-age': '86400',
+        'x-allowed-content-types': 'application/gzip',
       }),
       body: buf,
     });
