@@ -10,7 +10,7 @@ const gunzipAsync = promisify(zlib.gunzip);
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const BLOB_API   = 'https://blob.vercel-storage.com';
 const API_VER    = '7';
-const CACHE_NAME = 'rs-metabase-cache.gz';
+const CACHE_NAME = 'rs-mc-v2.gz'; // v2: evita conflicto con blob público previo
 const TTL_MS     = 24 * 60 * 60 * 1000; // 24h
 
 function isConfigured() { return !!BLOB_TOKEN; }
@@ -53,6 +53,8 @@ async function writeCache(metaBase, metaOps, bcMapObj) {
     const ts      = Date.now();
     const buf     = await gzipAsync(JSON.stringify({ ts, metaBase, metaOps, bcMapObj }));
     const mb      = (buf.length / 1048576).toFixed(1);
+    // Borrar blob previo para evitar conflicto de access level
+    await deleteCache();
     const res = await fetch(`${BLOB_API}/${CACHE_NAME}?access=private`, {
       method:  'PUT',
       headers: authHeaders({
