@@ -347,6 +347,7 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     cuitC: oMap['cuit_comp'] ?? oMap['cuit comp'] ?? 21,
     qPart: oMap['q_particular'] ?? oMap['q particular'] ?? 16,
     rend: oMap['rend'] ?? oMap['rendimiento'] ?? 25,
+    est: oMap['estado'] ?? 10,
   };
   console.log('[logic] OPS (Q102): headers=', metaOps.headers, '| filas=', (metaOps.rows || []).length, '| idxO=', idxO);
   (metaOps.rows || []).forEach(row => {
@@ -354,6 +355,9 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     const rV = norm(g(row, idxO.rV)), rC = norm(g(row, idxO.rC));
     if (!aV && !aC && !rV && !rC) return;
     const f = toDateStr(g(row, idxO.f)); if (!f) return;
+    const est = String(g(row, idxO.est) || '').trim().toUpperCase();
+    if (est === '0' || est === '' || est === 'OFRECIMIENTOS' || est === 'PUBLICADAS' || est === 'NO CONCRETADAS' || est === 'BAJA') return;
+
     const cargAcRaw = String(g(row, idxO.cargAc) || '').trim();
     const cargF = g(row, idxO.cargF) ? toDateStr(g(row, idxO.cargF)) : '';
     ops.push([
@@ -859,6 +863,18 @@ async function getReport(ac, startTs, endTs, opts) {
   r.cabCSocCount = Object.keys(socCompraWeek).length;
   allOps.sort((a, b) => b.q - a.q);
   r.top5 = allOps.slice(0, 5);
+  r.allOps = allOps; // Todos los negocios de la semana (para modal)
+
+  // Rend ponderado calculado desde los mismos datos del panel → consistencia garantizada
+  let myRendSumW = 0, myRendCabW = 0;
+  allOps.forEach(op => {
+    const rv = op.rend || 0;
+    if (rv !== 0 && Math.abs(rv) < 0.25) {
+      myRendSumW += rv * (op.q || 0);
+      myRendCabW += (op.q || 0);
+    }
+  });
+  r.myRendPond = myRendCabW > 0 ? myRendSumW / myRendCabW : 0;
 
   r.ccc = (cabConcBase + cabNoConcBase) > 0
     ? Math.round(cabConcBase / (cabConcBase + cabNoConcBase) * 100) + '%'
@@ -1110,7 +1126,7 @@ async function getReport(ac, startTs, endTs, opts) {
 
 
   // ── RANKING GLOBAL ──
-  const rOfrec = {}, rComp = {}, rOper = {};
+  const rOfrec = {}, rComp = {}, rOper = {}, rOperRend = {};
   const seenRnkOf = {}, seenRnkOp = {};
 
   for (let i = 0; i < D.base.length; i++) {
@@ -1137,15 +1153,29 @@ async function getReport(ac, startTs, endTs, opts) {
       seenRnkOp[oKey] = true;
       if (inS(row[2])) {
         const q = Number(row[4]) || 0;
-        const vNs = [];
-        const aV = String(row[0] || '').trim(); if (aV && !vNs.includes(aV)) vNs.push(aV);
-        const rV = String(row[18] || '').trim(); if (rV && !vNs.includes(rV)) vNs.push(rV);
-        const cNs = [];
-        const aC = String(row[1] || '').trim(); if (aC && !cNs.includes(aC)) cNs.push(aC);
-        const rC = String(row[19] || '').trim(); if (rC && !cNs.includes(rC)) cNs.push(rC);
-        const uniqueOps = [...new Set([...vNs, ...cNs])];
-        uniqueOps.forEach(x => { rOper[x] = (rOper[x] || 0) + q; });
-        cNs.forEach(x => { rComp[x] = (rComp[x] || 0) + q; });
+        const rend = Number(row[20]) || 0;
+        const aV = String(row[0] || '').trim();
+        const aC = String(row[1] || '').trim();
+        const rV = String(row[18] || '').trim();
+        const rC = String(row[19] || '').trim();
+        const allPartic = new Set();
+        if (aV) allPartic.add(aV);
+        if (aC) allPartic.add(aC);
+        if (rV) allPartic.add(rV);
+        if (rC) allPartic.add(rC);
+
+        allPartic.forEach(x => { rOper[x] = (rOper[x] || 0) + q; });
+        if (aC) rComp[aC] = (rComp[aC] || 0) + q;
+        if (rC && rC !== aC) rComp[rC] = (rComp[rC] || 0) + q;
+
+        // Rend ponderado: para todos los que participan (misma lógica que el panel)
+        if (rend !== 0 && Math.abs(rend) < 0.25) {
+          allPartic.forEach(x => {
+            if (!rOperRend[x]) rOperRend[x] = { sumW: 0, cabW: 0 };
+            rOperRend[x].sumW += rend * q;
+            rOperRend[x].cabW += q;
+          });
+        }
       }
     }
   }
@@ -1154,7 +1184,13 @@ async function getReport(ac, startTs, endTs, opts) {
   }
   r.rankingOfrecidas = toRnk(rOfrec);
   r.rankingCompradas = toRnk(rComp);
-  r.rankingOperadas = toRnk(rOper);
+  r.rankingOperadas = Object.entries(rOper)
+    .map(([nombre, q]) => {
+      const wr = rOperRend[nombre];
+      const rendPond = (wr && wr.cabW > 0) ? wr.sumW / wr.cabW : 0;
+      return { nombre, q, rendPond };
+    })
+    .sort((a, b) => b.q - a.q);
 
   // Incluir timestamp del cache de Metabase para mostrarlo en el frontend
   r.metaCacheTs = D.metaCacheTs || diskCache.getCacheTs() || Date.now();
