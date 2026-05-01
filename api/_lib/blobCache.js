@@ -55,7 +55,7 @@ async function writeCache(metaBase, metaOps, bcMapObj) {
     const mb      = (buf.length / 1048576).toFixed(1);
     // Borrar blob previo para evitar conflicto de access level
     await deleteCache();
-    const res = await fetch(`${BLOB_API}/${CACHE_NAME}?access=private`, {
+    const res = await fetch(`${BLOB_API}/${CACHE_NAME}`, {
       method:  'PUT',
       headers: authHeaders({
         'Content-Type':        'application/gzip',
