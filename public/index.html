@@ -1251,6 +1251,24 @@
       font-weight: 400;
       opacity: 0.8;
     }
+
+    /* ── CRM Subtítulo clickeable ── */
+    .crm-subt-link {
+      cursor: pointer;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: color 0.15s;
+    }
+    .crm-subt-link:hover { color: var(--accent); }
+    .crm-subt-link::after {
+      content: '›';
+      font-size: 14px;
+      opacity: 0.5;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .crm-subt-link:hover::after { opacity: 1; transform: translateX(2px); }
   </style>
 </head>
 
@@ -1738,6 +1756,7 @@
 
       sm[2].innerHTML = ksmInnerCompact('Soc. Gestionadas', d.tSG || 0, (d.com || 0) + ' Comentario / ' + (d.age || 0) + ' Agenda', dcSmall((d.tSG || 0) - (d.pTSG || 0)));
       var actData = d.actSemanal || [];
+      var actAll  = d.actAll  || actData;
       var actHasKt = actData.some(function (a) { return a.kt && a.kt !== '-'; });
       var actHasKv = actData.some(function (a) { return a.kv && a.kv !== '-'; });
       var actRows = actData.slice(0, 5).map(function (a) {
@@ -1750,12 +1769,13 @@
           '<td style="font-size:10px">' + (a.cm || '-') + '</td></tr>';
       }).join('');
       var actSection = actRows
-        ? '<div class="compact-block"><div class="crm-subt">Top Soc Gestionadas de la Semana</div>' +
+        ? '<div class="compact-block"><div class="crm-subt crm-subt-link" id="crm-act-title">Top Soc Gestionadas de la Semana</div>' +
         '<div class="tw"><table class="compact-table"><thead><tr>' +
         (actHasKt ? '<th>Kt</th>' : '') + (actHasKv ? '<th>Kv</th>' : '') +
         '<th>Usuario - Sociedad</th><th>Fuente</th><th>Tipo</th><th>Comentario</th></tr></thead>' +
         '<tbody>' + actRows + '</tbody></table></div></div>' : '';
       var ssgData = d.ssgTop5 || [];
+      var ssgAll  = d.ssgAll  || ssgData;
       var ssgHasKt = ssgData.some(function (s) { return s.kt && s.kt !== '-'; });
       var ssgHasKv = ssgData.some(function (s) { return s.kv && s.kv !== '-'; });
       var ssgRows = ssgData.map(function (s) {
@@ -1766,7 +1786,7 @@
           '<td style="font-size:10px">' + (s.ug === '126a' || s.ug === '11a' ? '' : (s.ug || '-')) + '</td></tr>';
       }).join('');
       var ssgSection = ssgRows
-        ? '<div class="compact-block"><div class="crm-subt">Top Soc. Sin Gestión</div>' +
+        ? '<div class="compact-block"><div class="crm-subt crm-subt-link" id="crm-ssg-title">Top Soc. Sin Gestión</div>' +
         '<div class="tw"><table class="compact-table"><thead><tr>' +
         (ssgHasKt ? '<th>Kt</th>' : '') + (ssgHasKv ? '<th>Kv</th>' : '') +
         '<th>Usuario - Sociedad</th><th>F. Asig.</th><th>Fuente</th><th>Ult Act.</th></tr></thead>' +
@@ -1788,6 +1808,12 @@
         '</div><div class="crm-tables">' + actSection +
         ssgSection +
         '</div></div></div>';
+
+      // Conectar títulos clickeables al modal
+      var actTitleEl = eid('crm-act-title');
+      if (actTitleEl) actTitleEl.onclick = function () { openCrmModal('act', actAll); };
+      var ssgTitleEl = eid('crm-ssg-title');
+      if (ssgTitleEl) ssgTitleEl.onclick = function () { openCrmModal('ssg', ssgAll); };
     }
 
     function renderActSemanal(d) { eid('act-section').innerHTML = ''; }
@@ -2812,8 +2838,71 @@
     });
     // Cerrar con Escape
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeOpsModal();
+      if (e.key === 'Escape') { closeOpsModal(); closeCrmModal(); }
     });
+
+    /* ── Modal CRM Detail ── */
+    function openCrmModal(type, list) {
+      var overlay = eid('crm-modal-overlay');
+      var titleEl = eid('crm-modal-title');
+      var subEl   = eid('crm-modal-subtitle');
+      var bodyEl  = eid('crm-modal-body');
+      if (!overlay) return;
+
+      list = list || [];
+      var isAct = type === 'act';
+      titleEl.innerText = isAct ? 'Sociedades Gestionadas — Detalle completo' : 'Sociedades Sin Gestión — Detalle completo';
+      titleEl.style.cssText = 'font-size:15px;font-weight:700;color:#111827;';
+      subEl.innerText   = list.length + (isAct ? ' sociedades gestionadas esta semana' : ' sociedades sin gestión');
+
+      var hasKt = list.some(function(x){ return x.kt && x.kt !== '-'; });
+      var hasKv = list.some(function(x){ return x.kv && x.kv !== '-'; });
+
+      var head = '<thead><tr>' +
+        (hasKt ? '<th>Kt</th>' : '') +
+        (hasKv ? '<th>Kv</th>' : '') +
+        (isAct
+          ? '<th>Sociedad</th><th>Fuente</th><th>Tipo</th><th>Comentario</th>'
+          : '<th>Sociedad</th><th>F. Asig.</th><th>Fuente</th><th>Ult. Act.</th>') +
+        '</tr></thead>';
+
+      var rows = list.map(function(x) {
+        var ktH = hasKt ? '<td><span class="kt-tag" style="background:'+getKtBgColor(x.kt)+';color:'+getKtFgColor(x.kt)+'!important">'+fmtK(x.kt)+'</span></td>' : '';
+        var kvH = hasKv ? '<td><span class="kt-tag" style="background:'+getKtBgColor(x.kv)+';color:'+getKtFgColor(x.kv)+'!important">'+fmtK(x.kv)+'</span></td>' : '';
+        if (isAct) {
+          return '<tr>'+ktH+kvH+
+            '<td class="tdb" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(x.soc||'-')+'</td>'+
+            '<td style="font-size:10px">'+(x.fuente||'-')+'</td>'+
+            '<td style="font-size:9px">'+(x.tipo||'-')+'</td>'+
+            '<td style="font-size:10px;max-width:400px;white-space:normal;line-height:1.4">'+(x.cm||'-')+'</td>'+
+            '</tr>';
+        } else {
+          var ugVal = (x.ug === '126a' || x.ug === '11a') ? '' : (x.ug || '-');
+          return '<tr>'+ktH+kvH+
+            '<td class="tdb" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(x.soc||'-')+'</td>'+
+            '<td>'+fDDash(x.fa)+'</td>'+
+            '<td style="font-size:10px">'+(x.fuente||'-')+'</td>'+
+            '<td style="font-size:10px">'+ugVal+'</td>'+
+            '</tr>';
+        }
+      }).join('');
+
+      bodyEl.innerHTML = list.length
+        ? '<table class="compact-table" style="width:100%">'+head+'<tbody>'+rows+'</tbody></table>'
+        : '<div class="empty-t">Sin datos</div>';
+
+      overlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCrmModal() {
+      var overlay = eid('crm-modal-overlay');
+      if (overlay) overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+
+
 
   </script>
 
@@ -2828,6 +2917,20 @@
         <button id="ops-modal-close" onclick="closeOpsModal()" title="Cerrar">&#x2715;</button>
       </div>
       <div id="ops-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal CRM Detail (Gestionadas / Sin Gestión) -->
+  <div id="crm-modal-overlay" onclick="if(event.target===this)closeCrmModal()" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;animation:modalFadeIn 0.18s ease;">
+    <div id="crm-modal" style="background:#ffffff;color:#111827;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.25);width:min(96vw,1100px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#ffffff;border-radius:16px 16px 0 0;">
+        <div>
+          <div class="modal-title" id="crm-modal-title">Detalle CRM</div>
+          <div class="modal-subtitle" id="crm-modal-subtitle" style="color:#6b7280;font-size:11px;margin-top:2px;"></div>
+        </div>
+        <button style="width:32px;height:32px;border:none;border-radius:8px;background:#f3f4f6;color:#374151;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;" onclick="closeCrmModal()" title="Cerrar" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&#x2715;</button>
+      </div>
+      <div id="crm-modal-body" style="overflow-y:auto;overflow-x:auto;padding:16px 20px 20px;flex:1;background:#ffffff;color:#111827;"></div>
     </div>
   </div>
 

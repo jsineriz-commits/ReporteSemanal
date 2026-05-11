@@ -178,9 +178,9 @@ async function getConfig() {
     if (nombre && mail) {
       acMap[nombre] = mail;
       acMap[norm(nombre)] = mail;
-      if (idx >= 29) {
+      if (idx >= 50) {
         if (!repsList.includes(nombre)) repsList.push(nombre);
-      } else {
+      } else if (idx <= 40) {
         if (!acsList.includes(nombre)) acsList.push(nombre);
       }
     }
@@ -218,12 +218,12 @@ async function loadData(forceRefresh) {
       _bcfullMap.clear();
       for (const [cuit, val] of Object.entries(red.bcMapObj)) _bcfullMap.set(cuit, val);
       _bcfullState = 'done';
-      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw] = await Promise.all([
+      const [comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw] = await Promise.all([
         getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
         getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
-        getSheetData('aux leads'), getSheetData('SAC'),
+        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Estados'), getSheetData('SAC'),
       ]);
-      return _processLoadData(red.metaBase, red.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, red.ts);
+      return _processLoadData(red.metaBase, red.metaOps, comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw, red.ts);
     }
   }
 
@@ -233,22 +233,22 @@ async function loadData(forceRefresh) {
     if (disk && disk.metaBase && disk.metaOps) {
       console.log('[logic] loadData: usando disk cache');
       _ensureBcfull(disk.metaEstab || null);
-      const [comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw] = await Promise.all([
+      const [comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw] = await Promise.all([
         getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
         getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
-        getSheetData('aux leads'), getSheetData('SAC'),
+        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Estados'), getSheetData('SAC'),
       ]);
-      return _processLoadData(disk.metaBase, disk.metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, disk.ts);
+      return _processLoadData(disk.metaBase, disk.metaOps, comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw, disk.ts);
     }
   }
 
   // ── 3. Fetch fresco desde Metabase ────────────────────────────────────────
   console.log('[logic] loadData: fetch fresco Q101+Q102+Q221 + Sheets...');
-  const [metaBase, metaOps, metaEstab, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw] = await Promise.all([
+  const [metaBase, metaOps, metaEstab, comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw] = await Promise.all([
     fetchMetabaseQuery(101), fetchMetabaseQuery(102), fetchMetabaseQuery(221),
     getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
     getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
-    getSheetData('aux leads'), getSheetData('SAC'),
+    getSheetDataFrom(CRM_SPREADSHEET_ID, 'Estados'), getSheetData('SAC'),
   ]);
 
   _bcfullMap.clear();
@@ -263,12 +263,12 @@ async function loadData(forceRefresh) {
     savedTs = diskCache.writeCache({ metaBase, metaOps, metaEstab });
   }
 
-  return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, savedTs || Date.now());
+  return _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw, savedTs || Date.now());
 }
 
 // ─── _processLoadData ─────────────────────────────────────────────────────────
 // Procesa los datos raw de Metabase + Sheets y construye los arrays internos.
-async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, auxLeadsRaw, sacsRaw, metaCacheTs) {
+async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw, metaCacheTs) {
   // ── BASE (Metabase Q101) ──
   const base = [];
   const bMap = {};
@@ -443,34 +443,22 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     ]);
   });
 
-  // ── AUX LEADS ──
-  // col A(0)=idLead, B(1)=mail, C(2)=fechaAsig, E(4)=estado,
-  // W(22)=diasEstadoActual, AA(26)=cuit, AD(29)=razonSocial,
-  // AF(31)=kt, AK(36)=kv, AL(37)=fuente, AM(38)=sinGestion,
-  // AN(39)=ultActividad, AO(40)=ultGestion, AP(41)=comentario
-  const auxLeads = [];
-  auxLeadsRaw.slice(1).forEach(row => {
+  // ── ESTADOS CRM (fuente: CRM_v1 → hoja Estados) ──
+  // A(0)=LeadID, B(1)=AC email, C(2)=Fuente, D(3)=CUIT,
+  // F(5)=Fecha Asign, S(18)=ESTADO (NUEVO / EN REVISION / DESCARTADO / NO HABILITADO)
+  const estados = [];
+  estadosRaw.slice(1).forEach(row => {
     const mail = String(g(row, 1) || '').trim().toLowerCase(); if (!mail) return;
-    const est = String(g(row, 4) || '').trim().toUpperCase();
-    const f = toDateStr(g(row, 2));
-    auxLeads.push([
-      mail,                                   // 0 mail
-      f,                                      // 1 fechaAsig
-      f ? toDayIdx(g(row, 2)) : -1,           // 2 dayIdx
-      est === 'NUEVO' ? 1 : 0,                // 3 esNuevo
-      String(g(row, 31) || ''),               // 4 kt (col AF)
-      String(g(row, 36) || ''),               // 5 kv (col AK)
-      String(g(row, 29) || ''),               // 6 razonSocial (col AD)
-      String(g(row, 38) || ''),               // 7 sinGestion (col AM)
-      Number(g(row, 22)) || 0,               // 8 diasEstadoActual (col W)
-      Number(g(row, 32)) || 0,               // 9 ng
-      String(g(row, 40) || ''),              // 10 ultGestion (col AO)
-      String(g(row, 39) || ''),              // 11 ultActividad (col AN)
-      String(g(row, 26) || ''),              // 12 cuit (col AA)
-      String(g(row, 37) || ''),              // 13 fuente (col AL)
-      String(g(row, 41) || ''),              // 14 comentario (col AP)
-      est,                                   // 15 estado raw
-      String(g(row, 0) || ''),               // 16 idLead (col A)
+    const estado = String(g(row, 18) || '').trim().toUpperCase(); // col S = ESTADO
+    if (estado === 'NO HABILITADO') return; // excluir no habilitados
+    const f = toDateStr(g(row, 5));
+    estados.push([
+      mail,                            // 0 mail AC
+      f,                               // 1 fechaAsig (col F)
+      String(g(row, 2) || ''),         // 2 fuente (col C)
+      String(g(row, 0) || ''),         // 3 idLead (col A)
+      String(g(row, 3) || ''),         // 4 CUIT (col D)
+      estado,                          // 5 estado (col S): NUEVO, EN REVISION, etc.
     ]);
   });
 
@@ -493,9 +481,9 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     ]);
   });
 
-  const data = { base, ops, coms, agendas, leads, auxLeads, sacs, metaCacheTs: metaCacheTs || Date.now() };
+  const data = { base, ops, coms, agendas, leads, estados, sacs, metaCacheTs: metaCacheTs || Date.now() };
   cache.set('data', data, cache.TTL.DATA);
-  console.log(`[logic] _processLoadData: base=${base.length} ops=${ops.length} auxLeads=${auxLeads.length} metaCacheTs=${new Date(metaCacheTs || 0).toISOString()} completado.`);
+  console.log(`[logic] _processLoadData: base=${base.length} ops=${ops.length} estados=${estados.length} metaCacheTs=${new Date(metaCacheTs || 0).toISOString()} completado.`);
   return data;
 }
 
@@ -655,8 +643,7 @@ async function getReport(ac, startTs, endTs, opts) {
     rankingOfrecidas: [], rankingCompradas: [], rankingOperadas: [],
   };
 
-  // Detectar si hay datos CRM para este AC
-  let hasCrmData = D.auxLeads.some(row => row[0] === acMail) ||
+  let hasCrmData = D.estados.some(row => row[0] === acMail) ||
     D.coms.some(row => row[0] === acMail) ||
     D.agendas.some(row => row[0] === acMail) ||
     D.leads.some(row => row[0] === acMail);
@@ -683,10 +670,6 @@ async function getReport(ac, startTs, endTs, opts) {
   for (const lr of D.leads) {
     if (lr[4]) addKtKv(lr[4], lr[7] || '-', lr[8] || '-'); // lr[4]=CUIT, lr[7]=kt, lr[8]=kv
   }
-  // Prioridad 2 (último fallback): aux leads
-  for (const row of D.auxLeads) {
-    addKtKv(String(row[12] || '').trim(), row[4], row[5]);
-  }
   // Q221 (_bcfullMap) se consulta directamente en getKtKv — siempre va primero
 
   function getKtKv(cuitStr) {
@@ -703,7 +686,7 @@ async function getReport(ac, startTs, endTs, opts) {
         if (fuzzyKtKv) return fuzzyKtKv;
       }
     }
-    // c) auxLeads como fallback si Q221 no tiene el CUIT
+    // c) CRM Leads como fallback si Q221 no tiene el CUIT
     const auxKtKv = cuitKtKvMap[cuitStr];
     if (auxKtKv) return auxKtKv;
     return { kt: '-', kv: '-' };
@@ -961,27 +944,67 @@ async function getReport(ac, startTs, endTs, opts) {
     if (rowFa > prevFa) ssgByLead[socKey] = rowData;
   }
 
-  for (let i = 0; i < D.auxLeads.length; i++) {
-    const row = D.auxLeads[i];
+  // ── LEADS SIN GESTIÓN (desde CRM Estados + Leads + Comentarios/Agenda) ──
+
+  // Índice de última actividad por idLead (sobre TODOS los coms/agendas cargados)
+  const lastActByLeadAll = {};
+  for (let i = 0; i < D.coms.length; i++) {
+    const row = D.coms[i];
+    const id = String(row[7] || '').trim(); if (!id) continue;
+    if (!lastActByLeadAll[id] || row[1] > lastActByLeadAll[id].f)
+      lastActByLeadAll[id] = { f: row[1], cm: row[6] || '' };
+  }
+  for (let i = 0; i < D.agendas.length; i++) {
+    const row = D.agendas[i];
+    const id = String(row[6] || '').trim(); if (!id) continue;
+    if (!lastActByLeadAll[id] || row[1] > lastActByLeadAll[id].f)
+      lastActByLeadAll[id] = { f: row[1], cm: row[4] || '' };
+  }
+
+  // Lookup kt/kv/soc por idLead desde CRM Leads (ya cargados)
+  const leadsMapByLead = {};
+  for (let i = 0; i < D.leads.length; i++) {
+    const lr = D.leads[i];
+    const lid = String(lr[3] || '').trim();
+    if (lid && !leadsMapByLead[lid]) leadsMapByLead[lid] = { kt: lr[7], kv: lr[8], soc: lr[5] };
+  }
+
+  for (let i = 0; i < D.estados.length; i++) {
+    const row = D.estados[i];
     if (row[0] !== acMail) continue;
 
-    const socKey = getLeadKey(row[16], row[6], 'aux:' + i);
+    const socKey = getLeadKey(row[3], '', 'est:' + i); // usa idLead como clave
+    const esNuevo = row[5] === 'NUEVO';
+    const fa = row[1]; // fechaAsig
+    const fuente = row[2];
+    const leadInfo = leadsMapByLead[String(row[3] || '').trim()] || { kt: '-', kv: '-', soc: '' };
+    const kt = leadInfo.kt, kv = leadInfo.kv, soc = leadInfo.soc || '';
 
-    if (row[1] && inS(row[1])) {
-      if (!asigSemData[socKey] || row[1] > (asigSemData[socKey].fa || ''))
-        asigSemData[socKey] = { kt: row[4], kv: row[5], soc: row[6], fa: row[1], sg: row[10], ug: row[11], w: row[8], fuente: row[13], asigSem: 1 };
+    // Última actividad desde coms/agendas (más confiable que spreadsheet)
+    const lastAct = lastActByLeadAll[String(row[3] || '').trim()];
+    const ug = lastAct ? lastAct.f : '';
+    const cm = lastAct ? lastAct.cm : '';
+
+    // Días desde fechaAsig (approx de diasEstadoActual)
+    const wDays = fa ? Math.round((Date.now() - new Date(fa.slice(0,4)+'-'+fa.slice(4,6)+'-'+fa.slice(6,8)).getTime()) / 86400000) : 0;
+
+    if (fa && inS(fa)) {
+      if (!asigSemData[socKey] || fa > (asigSemData[socKey].fa || ''))
+        asigSemData[socKey] = { kt, kv, soc, fa, sg: ug, ug, w: wDays, fuente, asigSem: 1 };
     }
 
-    if (row[3]) {  // esNuevo
+    // FIX: solo agrega a sinGest si NO tiene gestión esta semana
+    if (esNuevo && !socGest[socKey]) {
       socSinGestSet[socKey] = 1;
-      saveSsgRow(socKey, { kt: row[4], kv: row[5], soc: row[6], fa: row[1], sg: row[10], ug: row[11], w: row[8], fuente: row[13], asigSem: (row[1] && inS(row[1])) ? 1 : 0 });
-      if (row[1] && inS(row[1])) socSinGestAsigSemSet[socKey] = 1;
+      saveSsgRow(socKey, { kt, kv, soc, fa, sg: ug, ug, w: wDays, fuente, asigSem: (fa && inS(fa)) ? 1 : 0 });
+      if (fa && inS(fa)) socSinGestAsigSemSet[socKey] = 1;
     }
-    if (row[3] && row[1] && row[1] <= fin_) prevSocSinGestSet[socKey] = 1;
 
-    if (!row[3] && socKey && row[1] && inS(row[1])) {
-      if (!auxByLead[socKey] || row[1] > (auxByLead[socKey].fa || ''))
-        auxByLead[socKey] = { kt: row[4], kv: row[5], fa: row[1], fuente: row[13], estado: row[15], cm: row[14], tipo: 'Asignación', soc: row[6], idLead: row[16] };
+    if (esNuevo && fa && fa <= fin_) prevSocSinGestSet[socKey] = 1;
+
+    if (!esNuevo && socKey && fa && inS(fa)) {
+      if (!auxByLead[socKey] || fa > (auxByLead[socKey].fa || ''))
+        auxByLead[socKey] = { kt, kv, fa, fuente, estado: row[5], cm, tipo: 'Asignación', soc, idLead: row[3] };
     }
   }
 
@@ -997,6 +1020,11 @@ async function getReport(ac, startTs, endTs, opts) {
       if (!seenAsigSemFuenteSoc[sfKey]) {
         seenAsigSemFuenteSoc[sfKey] = 1;
         asigSemFuenteCount[fuente] = (asigSemFuenteCount[fuente] || 0) + 1;
+      }
+      // Fallback: si este lead no estaba en D.estados, poblar asigSemData igual
+      if (!asigSemData[lKey]) {
+        const wDays = lr[1] ? Math.round((Date.now() - new Date(lr[1].slice(0,4)+'-'+lr[1].slice(4,6)+'-'+lr[1].slice(6,8)).getTime()) / 86400000) : 0;
+        asigSemData[lKey] = { kt: lr[7] || '-', kv: lr[8] || '-', soc: lr[5] || '', fa: lr[1], sg: '', ug: '', w: wDays, fuente: lr[2] || '', asigSem: 1 };
       }
     }
     if (lr[1] && inA(lr[1])) asigPrevSoc[lKey] = 1;
@@ -1031,6 +1059,7 @@ async function getReport(ac, startTs, endTs, opts) {
     return a.fa < b.fa ? 1 : a.fa > b.fa ? -1 : 0;
   });
   r.ssgTop5 = ssgAll.slice(0, 5);
+  r.ssgAll = ssgAll; // lista completa para modal
   r.socSinGestNum = Object.keys(socSinGestSet).length;
   r.pSocSinGestNum = Object.keys(prevSocSinGestSet).length;
   props.setProp(ssgStoreKey2, String(r.socSinGestNum));
@@ -1107,6 +1136,7 @@ async function getReport(ac, startTs, endTs, opts) {
     return a._sortFa < b._sortFa ? 1 : a._sortFa > b._sortFa ? -1 : 0;
   });
   r.actSemanal = actArr.slice(0, 5).map(({ _sortFa, ...rest }) => rest);
+  r.actAll = actArr.map(({ _sortFa, ...rest }) => rest); // lista completa para modal
 
   // ── SAC ──
   for (const row of D.sacs) {
