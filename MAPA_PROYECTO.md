@@ -1,7 +1,7 @@
 # 🗺️ Mapa del Proyecto — Reporte Semanal DCAC
 
 > Documento vivo. Actualizar cuando cambien lógicas, filtros o estructura de datos.
-> Última actualización: 2026-04-29
+> Última actualización: 2026-05-15
 
 ---
 
@@ -30,13 +30,23 @@ graph TD
 
 ---
 
-## 2. Fuentes de Datos (Metabase)
+## 2. Fuentes de Datos
 
+### Metabase
 | Query | Nombre | Contenido | Uso |
 |-------|--------|-----------|-----|
 | **Q101** | Base Ofrecidas | Lotes publicados/ofrecidos. 1 fila por lote. Incluye estado, AC vendedor, cabezas, rend. | Ofrecidas, CCC, Cotizadas, Ranking Ofrecidas |
 | **Q102** | Operaciones | Operaciones concretadas. 1 fila por op. Incluye AC vend/comp, repre vend/comp, Q, rend, estado. | Operadas, Compradas, Top Negocios, Ranking Operadas/Compradas |
-| **Q221** | AuxLeads | Actividades CRM: comentarios, agenda. | Sección CRM, Socs. Gestionadas |
+| **Q221** | Establecimientos | Datos de establecimientos: cuit_titular_est, bovinos, vaca. | KT/KV por CUIT (bcfullMap) |
+
+### Google Sheets CRM (`CRM_v1`)
+| Hoja | Columnas clave | Contenido | Uso en logic.js |
+|------|---------------|-----------|----------------|
+| **Leads** | A=LeadID, B=fechaAsig, C=AC mail, D=fuente, L=CUIT, M=Razón Social, AH=kt, AI=kv, AL=estado | Leads asignados por AC | D.leads — fuente de soc, fa, fuente, kt/kv |
+| **Estados** | A=LeadID, B=AC mail, C=fuente, D=CUIT, F=fechaAsig, S=estado (NUEVO/EN REVISION/etc.) | Estado de cada lead por AC | D.estados — identifica leads sin gestión |
+| **Comentarios** | A=ID, B=ID Lead, C=Título Lead, D=AC mail, E=fecha, F=comentario | Comentarios de CRM | D.coms — gestiones, ULT ACT. |
+| **Agenda** | A=ID Tarea, B=ID Lead, C=Título Lead, D=AC mail, E=Fecha Inicio, G=Resumen, H=Descripción, J=Fecha Agendado | Tareas de agenda | D.agendas — gestiones, ULT ACT. |
+| **SAC** | Q=soc, T=fecha, U=jdSol, W=jdApro, X=UN, Y=estado, AC=acNorm | SACs enviados | D.sacs |
 
 ---
 
@@ -119,6 +129,8 @@ flowchart LR
         F2["Rendimiento outliers:\n|rend| >= 25% → muestra '—'\nNo entra en promedios ponderados"]
         F3["Ranking: seenRnkOp\nDeduplication por opId\n→ cada op se cuenta 1 sola vez"]
         F4["allOps (panel ops):\nSolo inS (semana actual)\nisV OR isC del AC seleccionado"]
+        F5["Agenda CRM (2026-05-15):\nSi col B (ID Lead) está vacía → descarta\n→ Agendas automáticas de cargas\nno cuentan como gestión"]
+        F6["ssgAll (2026-05-15):\nEntradas sin soc ni fa → descarta\n→ Registros incompletos del CRM\nno aparecen en Top Soc Sin Gestión"]
     end
 ```
 
@@ -253,6 +265,18 @@ flowchart TD
 
 > [!TIP]
 > **KT/KV tags**: `kt` = categoría tipo (FAE VEND, FAE COMP, INV VEND, INV COMP, etc.), `kv` = valor numérico de la categoría. Estos se calculan con `getKtKv()` y determinan el color del badge.
+
+> [!NOTE]
+> **Agendas automáticas de cargas (2026-05-15)**: Las entradas de la hoja **Agenda** sin `ID Lead` (col B vacía) son agendas automáticas generadas por el sistema de cargas. **Regla**: si `ID Lead` está vacío → la agenda no cuenta para la tarjeta de gestiones ni para el Top Soc Gestionadas.
+
+> [!NOTE]
+> **Filas NR vacías en Sin Gestión (2026-05-15)**: El loop de `D.estados` puede producir entradas sin `soc` ni `fa` (registros incompletos del CRM con fuente `NR`). Se filtran en `ssgAll` con `.filter(s => s && (s.soc || s.fa))` antes de armar `ssgTop5` y el contador `socSinGestNum`.
+
+> [!NOTE]
+> **F. ASIG. con fallback desde Leads (2026-05-15)**: La fecha de asignación en `Top Soc. Sin Gestión` viene de la col F del sheet **Estados**. Si está vacía, se usa como fallback la col B del sheet **Leads** (mismo `idLead`). `leadsMapByLead` ahora incluye `fa`.
+
+> [!NOTE]
+> **Formato ULT ACT. (2026-05-15)**: La columna `Ult Act.` en `Top Soc. Sin Gestión` ahora pasa por `fDDash()` igual que `F. Asig.`, mostrando `dd-MM-yyyy` en lugar del formato raw `yyyyMMdd`.
 
 ---
 

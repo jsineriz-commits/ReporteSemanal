@@ -1783,7 +1783,7 @@
           (ssgHasKt ? '<td><span class="kt-tag" style="background:' + getKtBgColor(s.kt) + ';color:' + getKtFgColor(s.kt) + '!important">' + fmtK(s.kt) + '</span></td>' : '') +
           (ssgHasKv ? '<td><span class="kt-tag" style="background:' + getKtBgColor(s.kv) + ';color:' + getKtFgColor(s.kv) + '!important">' + fmtK(s.kv) + '</span></td>' : '') +
           '<td class="tdb">' + (s.soc || '-') + '</td><td>' + fDDash(s.fa) + '</td><td style="font-size:9px">' + (s.fuente || '-') + '</td>' +
-          '<td style="font-size:10px">' + (s.ug === '126a' || s.ug === '11a' ? '' : (s.ug || '-')) + '</td></tr>';
+          '<td style="font-size:10px">' + fDDash(s.ug) + '</td></tr>';
       }).join('');
       var ssgSection = ssgRows
         ? '<div class="compact-block"><div class="crm-subt crm-subt-link" id="crm-ssg-title">Top Soc. Sin Gestión</div>' +

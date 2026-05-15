@@ -178,9 +178,9 @@ async function getConfig() {
     if (nombre && mail) {
       acMap[nombre] = mail;
       acMap[norm(nombre)] = mail;
-      if (idx >= 50) {
+      if (idx >= 29) {
         if (!repsList.includes(nombre)) repsList.push(nombre);
-      } else if (idx <= 40) {
+      } else {
         if (!acsList.includes(nombre)) acsList.push(nombre);
       }
     }
@@ -406,6 +406,7 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
   const agendas = [];
   agendasRaw.slice(1).forEach(row => {
     const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return; // D=AC Asignado
+    const idLead = String(g(row, 1) || '').trim(); if (!idLead) return; // B=ID Lead — sin ID Lead = agenda automática de carga, no cuenta
     const rawDate = g(row, 9); // J=Fecha Agendado (para ubicar en semana)
     const f = toDateStr(rawDate); if (!f) return;
     const fStr = f.length === 8 ? `${f.slice(6, 8)}/${f.slice(4, 6)}/${f.slice(0, 4)}` : String(rawDate || '');
@@ -423,20 +424,26 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
 
   // ── LEADS CRM (fuente: CRM_v1 → hoja Leads) ──
   // A(0)=LeadID, B(1)=fechaAsig, C(2)=AC mail, D(3)=fuente,
-  // L(11)=CUIT Sociedad, M(12)=Razón Social, AH(33)=kt, AI(34)=kv, AL(37)=estado
+  // E(4)=Nombre, F(5)=Apellido, L(11)=CUIT Sociedad, M(12)=Razón Social,
+  // AH(33)=kt, AI(34)=kv, AL(37)=estado
   const leads = [];
   leadsRaw.slice(1).forEach(row => {
     const mail = String(g(row, 2) || '').trim().toLowerCase(); if (!mail) return;
     const estado = String(g(row, 37) || '').trim();
     if (estado === 'NO HABILITADO') return;
     const f = toDateStr(g(row, 1)); if (!f) return;
+    const razonSocial = String(g(row, 12) || '').trim();
+    const nombre = String(g(row, 4) || '').trim();
+    const apellido = String(g(row, 5) || '').trim();
+    // Si no hay Razón Social, usar Nombre + Apellido del contacto (col E + F)
+    const socDisplay = razonSocial || [nombre, apellido].filter(Boolean).join(' ');
     leads.push([
       mail,                          // 0 mail AC
       f,                             // 1 fechaAsig (col B)
       String(g(row, 3) || ''),       // 2 fuente (col D)
       String(g(row, 0) || ''),       // 3 idLead (col A)
       String(g(row, 11) || ''),      // 4 CUIT Sociedad (col L)
-      String(g(row, 12) || ''),      // 5 Razón Social (col M)
+      socDisplay,                    // 5 Razón Social (col M) o Nombre+Apellido (col E+F)
       estado,                        // 6 estado (col AL)
       String(g(row, 33) || ''),      // 7 kt (col AH)
       String(g(row, 34) || ''),      // 8 kv (col AI)
@@ -961,12 +968,12 @@ async function getReport(ac, startTs, endTs, opts) {
       lastActByLeadAll[id] = { f: row[1], cm: row[4] || '' };
   }
 
-  // Lookup kt/kv/soc por idLead desde CRM Leads (ya cargados)
+  // Lookup kt/kv/soc/fa por idLead desde CRM Leads (ya cargados)
   const leadsMapByLead = {};
   for (let i = 0; i < D.leads.length; i++) {
     const lr = D.leads[i];
     const lid = String(lr[3] || '').trim();
-    if (lid && !leadsMapByLead[lid]) leadsMapByLead[lid] = { kt: lr[7], kv: lr[8], soc: lr[5] };
+    if (lid && !leadsMapByLead[lid]) leadsMapByLead[lid] = { kt: lr[7], kv: lr[8], soc: lr[5], fa: lr[1] };
   }
 
   for (let i = 0; i < D.estados.length; i++) {
@@ -975,10 +982,10 @@ async function getReport(ac, startTs, endTs, opts) {
 
     const socKey = getLeadKey(row[3], '', 'est:' + i); // usa idLead como clave
     const esNuevo = row[5] === 'NUEVO';
-    const fa = row[1]; // fechaAsig
     const fuente = row[2];
-    const leadInfo = leadsMapByLead[String(row[3] || '').trim()] || { kt: '-', kv: '-', soc: '' };
+    const leadInfo = leadsMapByLead[String(row[3] || '').trim()] || { kt: '-', kv: '-', soc: '', fa: '' };
     const kt = leadInfo.kt, kv = leadInfo.kv, soc = leadInfo.soc || '';
+    const fa = row[1] || leadInfo.fa || ''; // fechaAsig: col F de Estados → fallback col B de Leads
 
     // Última actividad desde coms/agendas (más confiable que spreadsheet)
     const lastAct = lastActByLeadAll[String(row[3] || '').trim()];
@@ -986,7 +993,7 @@ async function getReport(ac, startTs, endTs, opts) {
     const cm = lastAct ? lastAct.cm : '';
 
     // Días desde fechaAsig (approx de diasEstadoActual)
-    const wDays = fa ? Math.round((Date.now() - new Date(fa.slice(0,4)+'-'+fa.slice(4,6)+'-'+fa.slice(6,8)).getTime()) / 86400000) : 0;
+    const wDays = fa ? Math.round((Date.now() - new Date(fa.slice(0, 4) + '-' + fa.slice(4, 6) + '-' + fa.slice(6, 8)).getTime()) / 86400000) : 0;
 
     if (fa && inS(fa)) {
       if (!asigSemData[socKey] || fa > (asigSemData[socKey].fa || ''))
@@ -1023,7 +1030,7 @@ async function getReport(ac, startTs, endTs, opts) {
       }
       // Fallback: si este lead no estaba en D.estados, poblar asigSemData igual
       if (!asigSemData[lKey]) {
-        const wDays = lr[1] ? Math.round((Date.now() - new Date(lr[1].slice(0,4)+'-'+lr[1].slice(4,6)+'-'+lr[1].slice(6,8)).getTime()) / 86400000) : 0;
+        const wDays = lr[1] ? Math.round((Date.now() - new Date(lr[1].slice(0, 4) + '-' + lr[1].slice(4, 6) + '-' + lr[1].slice(6, 8)).getTime()) / 86400000) : 0;
         asigSemData[lKey] = { kt: lr[7] || '-', kv: lr[8] || '-', soc: lr[5] || '', fa: lr[1], sg: '', ug: '', w: wDays, fuente: lr[2] || '', asigSem: 1 };
       }
     }
@@ -1042,7 +1049,10 @@ async function getReport(ac, startTs, endTs, opts) {
     if (!pSocGest[pAsigKey]) prevSocSinGestSet[pAsigKey] = 1;
   }
 
-  const ssgAll = Object.keys(ssgByLead).map(k => ssgByLead[k]);
+  // Filtrar entradas sin datos útiles (sin soc ni fecha) — registros incompletos del CRM que no aportan información
+  const ssgAll = Object.keys(ssgByLead)
+    .map(k => ssgByLead[k])
+    .filter(s => s && (s.soc || s.fa));
   let ssgDaysSum = 0, ssgDaysCount = 0;
   for (const ssg of ssgAll) {
     const days = Number(ssg.w);
@@ -1060,7 +1070,7 @@ async function getReport(ac, startTs, endTs, opts) {
   });
   r.ssgTop5 = ssgAll.slice(0, 5);
   r.ssgAll = ssgAll; // lista completa para modal
-  r.socSinGestNum = Object.keys(socSinGestSet).length;
+  r.socSinGestNum = ssgAll.length; // usar ssgAll ya filtrado para consistencia con lo que se muestra
   r.pSocSinGestNum = Object.keys(prevSocSinGestSet).length;
   props.setProp(ssgStoreKey2, String(r.socSinGestNum));
 
@@ -1098,11 +1108,11 @@ async function getReport(ac, startTs, endTs, opts) {
   const leadFuenteMap = {}, leadCuitMap = {}, leadSocMap = {}, leadEstadoMap = {}, leadFechaMap = {};
   for (const lr of D.leads) {
     if (!lr[3]) continue;          // lr[3] = idLead
-    leadFuenteMap[lr[3]]  = lr[2]; // fuente
-    leadCuitMap[lr[3]]    = lr[4]; // CUIT Sociedad
-    leadSocMap[lr[3]]     = lr[5]; // Razón Social
-    leadEstadoMap[lr[3]]  = lr[6]; // estado
-    leadFechaMap[lr[3]]   = lr[1]; // fechaAsig
+    leadFuenteMap[lr[3]] = lr[2]; // fuente
+    leadCuitMap[lr[3]] = lr[4]; // CUIT Sociedad
+    leadSocMap[lr[3]] = lr[5]; // Razón Social
+    leadEstadoMap[lr[3]] = lr[6]; // estado
+    leadFechaMap[lr[3]] = lr[1]; // fechaAsig
   }
 
 
@@ -1122,9 +1132,9 @@ async function getReport(ac, startTs, endTs, opts) {
     const soc = leadSocMap[iLead] || crm.soc || (al ? al.soc : '-') || '-';
 
     // fuente, estado, fechaAsig: CRM Leads, fallback aux leads
-    const fuente  = leadFuenteMap[iLead]  || (al ? al.fuente  : '-') || '-';
-    const estado  = leadEstadoMap[iLead]  || (al ? al.estado  : '-') || '-';
-    const fa      = leadFechaMap[iLead]   || crm.f;
+    const fuente = leadFuenteMap[iLead] || (al ? al.fuente : '-') || '-';
+    const estado = leadEstadoMap[iLead] || (al ? al.estado : '-') || '-';
+    const fa = leadFechaMap[iLead] || crm.f;
 
     const sortFa = fa || crm.f;
     actArr.push({ kt, kv, soc, fa, fuente, estado, cm: crm.cm, tipo: crm.tipo, _sortFa: sortFa });
