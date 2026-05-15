@@ -407,6 +407,8 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
   agendasRaw.slice(1).forEach(row => {
     const mail = String(g(row, 3) || '').trim().toLowerCase(); if (!mail) return; // D=AC Asignado
     const idLead = String(g(row, 1) || '').trim(); if (!idLead) return; // B=ID Lead — sin ID Lead = agenda automática de carga, no cuenta
+    const resumen = String(g(row, 6) || '').trim(); // G=Resumen Evento
+    if (/^Carga \d+/.test(resumen)) return; // agenda automática de carga ("Carga 31058 - ...") — no cuenta
     const rawDate = g(row, 9); // J=Fecha Agendado (para ubicar en semana)
     const f = toDateStr(rawDate); if (!f) return;
     const fStr = f.length === 8 ? `${f.slice(6, 8)}/${f.slice(4, 6)}/${f.slice(0, 4)}` : String(rawDate || '');
@@ -985,7 +987,7 @@ async function getReport(ac, startTs, endTs, opts) {
     const fuente = row[2];
     const leadInfo = leadsMapByLead[String(row[3] || '').trim()] || { kt: '-', kv: '-', soc: '', fa: '' };
     const kt = leadInfo.kt, kv = leadInfo.kv, soc = leadInfo.soc || '';
-    const fa = row[1] || leadInfo.fa || ''; // fechaAsig: col F de Estados → fallback col B de Leads
+    const fa = leadInfo.fa || row[1] || ''; // fechaAsig: col B de Leads (prioritaria) → fallback col F de Estados
 
     // Última actividad desde coms/agendas (más confiable que spreadsheet)
     const lastAct = lastActByLeadAll[String(row[3] || '').trim()];
