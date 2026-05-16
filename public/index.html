@@ -980,6 +980,9 @@
       .no-pdf {
         display: none !important;
       }
+      .rend-screen-only {
+        display: none !important;
+      }
 
       .main-layout {
         display: block;
@@ -1008,6 +1011,9 @@
         border: 1px solid #e5e7eb;
       }
     }
+
+    /* Badge rendimiento en header: oculto en clón PDF (clase is-pdf) */
+    .is-pdf .rend-screen-only { display: none !important; }
 
     @media(max-width:768px) {
       .kpi-row {
@@ -1266,14 +1272,22 @@
       gap: 5px;
       transition: color 0.15s;
     }
-    .crm-subt-link:hover { color: var(--accent); }
+
+    .crm-subt-link:hover {
+      color: var(--accent);
+    }
+
     .crm-subt-link::after {
       content: '›';
       font-size: 14px;
       opacity: 0.5;
       transition: opacity 0.15s, transform 0.15s;
     }
-    .crm-subt-link:hover::after { opacity: 1; transform: translateX(2px); }
+
+    .crm-subt-link:hover::after {
+      opacity: 1;
+      transform: translateX(2px);
+    }
   </style>
 </head>
 
@@ -1689,9 +1703,20 @@
       // Solo ACs ven el rendimiento (no representantes)
       var isACSelected = CFG.acs && CFG.acs.indexOf(eid('selAC').value) >= 0;
 
+      // Badge de rendimiento en el título (solo pantalla, no PDF ni mail)
+      var rendTitleBadge = '';
+      var rtRv = Number(d.myRendPond) || 0;
+      if (rtRv !== 0 && Math.abs(rtRv) < 0.25) {
+        var rtPct = (rtRv * 100).toFixed(1) + '%';
+        var rtBg  = rtRv > 0.02 ? '#dcfce7' : rtRv > 0 ? '#fef9c3' : '#fee2e2';
+        var rtFg  = rtRv > 0.02 ? '#15803d' : rtRv > 0 ? '#854d0e' : '#dc2626';
+        var rtBo  = rtRv > 0.02 ? '#bbf7d0' : rtRv > 0 ? '#fde68a' : '#fecaca';
+        rendTitleBadge = '<span class="rend-screen-only" style="display:inline-block;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;background:' + rtBg + ';color:' + rtFg + ';border:1px solid ' + rtBo + ';margin-left:10px;vertical-align:middle;letter-spacing:0.01em">' + rtPct + '</span>';
+      }
+
       eid('rpt-header').innerHTML =
         '<div class="rh"><div class="rht">' +
-        '<div class="rt"><span class="dot"></span>Reporte Semanal — ' + ac + '</div>' +
+        '<div class="rt"><span class="dot"></span>Reporte Semanal — ' + ac + rendTitleBadge + '</div>' +
         '<div class="rmeta"><span class="mt">SEMANA ' + sem + ' &middot; ' + anio + '</span><span class="mt">' + fD(sT) + ' al ' + fD(eT) + '</span></div>' +
         '</div></div>';
       var concChips =
@@ -1762,7 +1787,7 @@
 
       sm[2].innerHTML = ksmInnerCompact('Soc. Gestionadas', d.tSG || 0, (d.com || 0) + ' Comentario / ' + (d.age || 0) + ' Agenda', dcSmall((d.tSG || 0) - (d.pTSG || 0)));
       var actData = d.actSemanal || [];
-      var actAll  = d.actAll  || actData;
+      var actAll = d.actAll || actData;
       var actHasKt = actData.some(function (a) { return a.kt && a.kt !== '-'; });
       var actHasKv = actData.some(function (a) { return a.kv && a.kv !== '-'; });
       var actRows = actData.slice(0, 5).map(function (a) {
@@ -1781,7 +1806,7 @@
         '<th>Usuario - Sociedad</th><th>Fuente</th><th>Tipo</th><th>Comentario</th></tr></thead>' +
         '<tbody>' + actRows + '</tbody></table></div></div>' : '';
       var ssgData = d.ssgTop5 || [];
-      var ssgAll  = d.ssgAll  || ssgData;
+      var ssgAll = d.ssgAll || ssgData;
       var ssgHasKt = ssgData.some(function (s) { return s.kt && s.kt !== '-'; });
       var ssgHasKv = ssgData.some(function (s) { return s.kv && s.kv !== '-'; });
       var ssgRows = ssgData.map(function (s) {
@@ -2015,7 +2040,7 @@
     // Convierte items de allOps {q,kt,kv,ktC,kvC,rend,d:[id,un,socV,...,socC,...,fecha,q,carga,lado]}
     // al formato que espera el panel {id,un,soc,fecha,q,kt,kv,lado,rend}
     function allOpsToDetailFormat(ops) {
-      var result = ops.map(function(o) {
+      var result = ops.map(function (o) {
         var r = o.d || [];
         return {
           id: r[0] || '',
@@ -2148,7 +2173,7 @@
       else if (type === 'compradas') list = CURRENT_DATA.rankingCompradas || [];
       else if (type === 'operadas') {
         var currentAC = (eid('selAC').value || '').toLowerCase().trim();
-        list = (CURRENT_DATA.rankingOperadas || []).map(function(item) {
+        list = (CURRENT_DATA.rankingOperadas || []).map(function (item) {
           if (String(item.nombre || '').toLowerCase().trim() === currentAC) {
             return Object.assign({}, item, { rendPond: CURRENT_DATA.myRendPond || 0 });
           }
@@ -2158,7 +2183,7 @@
 
       // Ordenar según sortBy
       if (type === 'operadas' && sortBy === 'rend') {
-        list = list.slice().sort(function(a, b) {
+        list = list.slice().sort(function (a, b) {
           var ra = Number(a.rendPond) || 0, rb = Number(b.rendPond) || 0;
           // outliers (|rend|>=25%) van al final
           var aOut = (ra === 0 || Math.abs(ra) >= 0.25);
@@ -2914,18 +2939,18 @@
     function openCrmModal(type, list) {
       var overlay = eid('crm-modal-overlay');
       var titleEl = eid('crm-modal-title');
-      var subEl   = eid('crm-modal-subtitle');
-      var bodyEl  = eid('crm-modal-body');
+      var subEl = eid('crm-modal-subtitle');
+      var bodyEl = eid('crm-modal-body');
       if (!overlay) return;
 
       list = list || [];
       var isAct = type === 'act';
       titleEl.innerText = isAct ? 'Sociedades Gestionadas — Detalle completo' : 'Sociedades Sin Gestión — Detalle completo';
       titleEl.style.cssText = 'font-size:15px;font-weight:700;color:#111827;';
-      subEl.innerText   = list.length + (isAct ? ' sociedades gestionadas esta semana' : ' sociedades sin gestión');
+      subEl.innerText = list.length + (isAct ? ' sociedades gestionadas esta semana' : ' sociedades sin gestión');
 
-      var hasKt = list.some(function(x){ return x.kt && x.kt !== '-'; });
-      var hasKv = list.some(function(x){ return x.kv && x.kv !== '-'; });
+      var hasKt = list.some(function (x) { return x.kt && x.kt !== '-'; });
+      var hasKv = list.some(function (x) { return x.kv && x.kv !== '-'; });
 
       var head = '<thead><tr>' +
         (hasKt ? '<th>Kt</th>' : '') +
@@ -2935,28 +2960,28 @@
           : '<th>Sociedad</th><th>F. Asig.</th><th>Fuente</th><th>Ult. Act.</th>') +
         '</tr></thead>';
 
-      var rows = list.map(function(x) {
-        var ktH = hasKt ? '<td><span class="kt-tag" style="background:'+getKtBgColor(x.kt)+';color:'+getKtFgColor(x.kt)+'!important">'+fmtK(x.kt)+'</span></td>' : '';
-        var kvH = hasKv ? '<td><span class="kt-tag" style="background:'+getKtBgColor(x.kv)+';color:'+getKtFgColor(x.kv)+'!important">'+fmtK(x.kv)+'</span></td>' : '';
+      var rows = list.map(function (x) {
+        var ktH = hasKt ? '<td><span class="kt-tag" style="background:' + getKtBgColor(x.kt) + ';color:' + getKtFgColor(x.kt) + '!important">' + fmtK(x.kt) + '</span></td>' : '';
+        var kvH = hasKv ? '<td><span class="kt-tag" style="background:' + getKtBgColor(x.kv) + ';color:' + getKtFgColor(x.kv) + '!important">' + fmtK(x.kv) + '</span></td>' : '';
         if (isAct) {
-          return '<tr>'+ktH+kvH+
-            '<td class="tdb" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(x.soc||'-')+'</td>'+
-            '<td style="font-size:10px">'+(x.fuente||'-')+'</td>'+
-            '<td style="font-size:9px">'+(x.tipo||'-')+'</td>'+
-            '<td style="font-size:10px;max-width:400px;white-space:normal;line-height:1.4">'+(x.cm||'-')+'</td>'+
+          return '<tr>' + ktH + kvH +
+            '<td class="tdb" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (x.soc || '-') + '</td>' +
+            '<td style="font-size:10px">' + (x.fuente || '-') + '</td>' +
+            '<td style="font-size:9px">' + (x.tipo || '-') + '</td>' +
+            '<td style="font-size:10px;max-width:400px;white-space:normal;line-height:1.4">' + (x.cm || '-') + '</td>' +
             '</tr>';
         } else {
-          return '<tr>'+ktH+kvH+
-            '<td class="tdb" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(x.soc||'-')+'</td>'+
-            '<td>'+fDDash(x.fa)+'</td>'+
-            '<td style="font-size:10px">'+(x.fuente||'-')+'</td>'+
-            '<td style="font-size:10px">'+fDDash(x.ug)+'</td>'+
+          return '<tr>' + ktH + kvH +
+            '<td class="tdb" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (x.soc || '-') + '</td>' +
+            '<td>' + fDDash(x.fa) + '</td>' +
+            '<td style="font-size:10px">' + (x.fuente || '-') + '</td>' +
+            '<td style="font-size:10px">' + fDDash(x.ug) + '</td>' +
             '</tr>';
         }
       }).join('');
 
       bodyEl.innerHTML = list.length
-        ? '<table class="compact-table" style="width:100%">'+head+'<tbody>'+rows+'</tbody></table>'
+        ? '<table class="compact-table" style="width:100%">' + head + '<tbody>' + rows + '</tbody></table>'
         : '<div class="empty-t">Sin datos</div>';
 
       overlay.style.display = 'flex';
@@ -2989,16 +3014,24 @@
   </div>
 
   <!-- Modal CRM Detail (Gestionadas / Sin Gestión) -->
-  <div id="crm-modal-overlay" onclick="if(event.target===this)closeCrmModal()" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;animation:modalFadeIn 0.18s ease;">
-    <div id="crm-modal" style="background:#ffffff;color:#111827;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.25);width:min(96vw,1100px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#ffffff;border-radius:16px 16px 0 0;">
+  <div id="crm-modal-overlay" onclick="if(event.target===this)closeCrmModal()"
+    style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;animation:modalFadeIn 0.18s ease;">
+    <div id="crm-modal"
+      style="background:#ffffff;color:#111827;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.25);width:min(96vw,1100px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div
+        style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#ffffff;border-radius:16px 16px 0 0;">
         <div>
           <div class="modal-title" id="crm-modal-title">Detalle CRM</div>
-          <div class="modal-subtitle" id="crm-modal-subtitle" style="color:#6b7280;font-size:11px;margin-top:2px;"></div>
+          <div class="modal-subtitle" id="crm-modal-subtitle" style="color:#6b7280;font-size:11px;margin-top:2px;">
+          </div>
         </div>
-        <button style="width:32px;height:32px;border:none;border-radius:8px;background:#f3f4f6;color:#374151;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;" onclick="closeCrmModal()" title="Cerrar" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">&#x2715;</button>
+        <button
+          style="width:32px;height:32px;border:none;border-radius:8px;background:#f3f4f6;color:#374151;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;"
+          onclick="closeCrmModal()" title="Cerrar" onmouseover="this.style.background='#e5e7eb'"
+          onmouseout="this.style.background='#f3f4f6'">&#x2715;</button>
       </div>
-      <div id="crm-modal-body" style="overflow-y:auto;overflow-x:auto;padding:16px 20px 20px;flex:1;background:#ffffff;color:#111827;"></div>
+      <div id="crm-modal-body"
+        style="overflow-y:auto;overflow-x:auto;padding:16px 20px 20px;flex:1;background:#ffffff;color:#111827;"></div>
     </div>
   </div>
 
