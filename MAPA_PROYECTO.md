@@ -1,7 +1,7 @@
 # 🗺️ Mapa del Proyecto — Reporte Semanal DCAC
 
 > Documento vivo. Actualizar cuando cambien lógicas, filtros o estructura de datos.
-> Última actualización: 2026-05-15
+> Última actualización: 2026-05-16
 
 ---
 
@@ -55,18 +55,22 @@ graph TD
 ```mermaid
 flowchart TD
     A[warmup / scheduledWarmup] --> B[loadData]
-    B --> C{Disk cache\nválido < 12h?}
-    C -- Sí --> D[Retorna datos del disco]
+    B --> C{Blob/Disk cache\nválido < 12h?}
+    C -- Sí --> D[Retorna Metabase del cache]
     C -- No --> E[fetch Q101 desde Metabase]
     E --> F[fetch Q102 desde Metabase]
     F --> G[fetch Q221 desde Metabase]
     G --> H[_processLoadData]
-    H --> I[Guarda en diskCache]
+    H --> I[Guarda en diskCache/BlobCache]
     I --> D
+
+    B --> CRM["⚡ SIEMPRE en vivo (sin cache)\nfetch CRM Sheets:\nLeads · Estados · Comentarios\nAgenda · SAC"]
 
     H --> H1["Mapea columnas por nombre\n(oMap, bMap, etc.)"]
     H1 --> H2["Filtra filas inválidas de Q102\n⚠️ BAJA · NO CONCRETADA\nOFRECIMIENTOS · vacío → descarta"]
-    H2 --> H3["Construye arrays:\nD.base · D.ops · D.auxLeads"]
+    H2 --> H3["Construye arrays:\nD.base · D.ops"]
+
+    D & CRM --> getReport
 ```
 
 ---
@@ -77,12 +81,12 @@ flowchart TD
 flowchart TD
     START([getReport ac, startTs, endTs]) --> RC{Report cache\nhit?}
     RC -- Sí --> RETURN[Retorna caché]
-    RC -- No --> LD[loadData]
+    RC -- No --> LD[loadData + CRM Sheets en vivo]
     LD --> RANGES["Define rangos de semana:\ninS · inA · inM\nbasados en startTs/endTs"]
 
     RANGES --> BASE["Loop D.base (Q101)\n→ Ofrecidas, CCC, Cotizadas\n→ rendPonderadoOf"]
     RANGES --> OPS["Loop D.ops (Q102)\n→ allOps del AC actual\n→ top5, allOps, myRendPond"]
-    RANGES --> CRM["Loop D.auxLeads (Q221)\n→ comentarios, agenda"]
+    RANGES --> CRM["Loop D.leads, D.estados, D.coms, D.agendas, D.sacs\n→ gestiones, Sin Gestión, SACs"]
 
     OPS --> FILTER["isV = aV===acN OR rV===acN\nisC = aC===acN OR rC===acN\nsi !isV && !isC → skip"]
     FILTER --> STATEOPS["⚠️ Ya filtrado en _processLoadData\nsolo llegan estados CONCRETADOS"]
@@ -131,6 +135,7 @@ flowchart LR
         F4["allOps (panel ops):\nSolo inS (semana actual)\nisV OR isC del AC seleccionado"]
         F5["Agenda CRM (2026-05-15):\nSi col B (ID Lead) está vacía → descarta\n→ Agendas automáticas de cargas\nno cuentan como gestión"]
         F6["ssgAll (2026-05-15):\nEntradas sin soc ni fa → descarta\n→ Registros incompletos del CRM\nno aparecen en Top Soc Sin Gestión"]
+        F7["Agenda CRM (2026-05-16):\nSi Resumen (col G) ~ /^Carga \\d+/ → descarta\n→ Agendas automáticas con ID Lead asignado\nCarga 31058, Carga 109781, etc."]
     end
 ```
 
@@ -140,21 +145,30 @@ flowchart LR
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Ranking: Primera carga
+    [*] --> Ranking: Primera carga (default: Operadas)
     Ranking --> Ranking: Click tab Ofrecidas/Compradas/Operadas
     Ranking --> Ranking: Click filtro Todos/AC/Representantes
+    Ranking --> Ranking: Click header Rend. (sort desc por rendimiento)
+    Ranking --> Ranking: Click header Cabezas (sort desc por cabezas)
     Ranking --> DetalleOF: Click KPI Cabezas Ofrecidas
     Ranking --> DetalleCC: Click KPI Cabezas Compradas
-    Ranking --> DetalleOPS: Click Top Negocios (header)
+    Ranking --> ModalOPS: Click título Top Negocios de la Semana
     Ranking --> DetalleOPS: Click punto en gráfico Evolución
     DetalleOF --> Ranking: Click X
     DetalleCC --> Ranking: Click X
     DetalleOPS --> Ranking: Click X
+    ModalOPS --> Ranking: Click X o click fuera o Escape
 
     note right of Ranking
         Persiste al cambiar AC/Semana
-        LAST_PANEL_STATE guarda modo+tipo
+        LAST_PANEL_STATE guarda modo+tipo+sortBy
         renderAll lo restaura con nuevos datos
+    end note
+
+    note right of ModalOPS
+        Modal flotante (no side panel)
+        Tabla completa con columna Rend.
+        tblOpsModal() = tblOps + col Rend.
     end note
 ```
 
@@ -169,8 +183,8 @@ stateDiagram-v2
 | Ranking Operadas | `CURRENT_DATA.rankingOperadas` + patch `myRendPond` | `{nombre, q, rendPond}` |
 | Detalle Ofrecidas | `CURRENT_DATA.detOf` | `{soc, est, cot, rend, q, kt, kv, un}` |
 | Detalle Compradas | `CURRENT_DATA.detC` | `{soc, rend, q, kt, kv, un}` |
-| Ops desde Top Negocios | `CURRENT_DATA.allOps` → `allOpsToDetailFormat()` | `{id, un, soc, fecha, q, kt, kv, lado, rend}` |
-| Ops desde gráfico | `CURRENT_DATA.operSemMesDets[weekIdx]` | `{id, un, soc, fecha, q, kt, kv, lado, rend}` |
+| **Modal** Top Negocios | `CURRENT_DATA.allOps` → `tblOpsModal()` | `{q,kt,kv,ktC,kvC,rend,d:[...]}` |
+| Ops desde gráfico (side panel) | `CURRENT_DATA.operSemMesDets[weekIdx]` | `{id, un, soc, fecha, q, kt, kv, lado, rend}` |
 | Detalle Cargas | `CURRENT_DATA.detCarg` | `{soc, fecha, q, ...}` |
 
 ---
@@ -207,8 +221,8 @@ flowchart TD
     E --> F[renderAll con nuevos datos]
     D & F --> G["CURRENT_DATA = newData"]
     G --> H{LAST_PANEL_STATE?}
-    H -- null --> I[showDefaultRanking Ofrecidas]
-    H -- ranking --> J["showDefaultRanking(type, roleFlt)"]
+    H -- null --> I[showDefaultRanking Operadas]
+    H -- ranking --> J["showDefaultRanking(type, roleFlt, sortBy)"]
     H -- "detail 'of'" --> K["showDetailPanel('of', newData.detOf)"]
     H -- "detail 'comp'" --> L["showDetailPanel('comp', newData.detC)"]
     H -- "detail 'ops' source='all'" --> M["allOpsToDetailFormat(newData.allOps)\nshowDetailPanel('ops', ...)"]
@@ -267,16 +281,31 @@ flowchart TD
 > **KT/KV tags**: `kt` = categoría tipo (FAE VEND, FAE COMP, INV VEND, INV COMP, etc.), `kv` = valor numérico de la categoría. Estos se calculan con `getKtKv()` y determinan el color del badge.
 
 > [!NOTE]
-> **Agendas automáticas de cargas (2026-05-15)**: Las entradas de la hoja **Agenda** sin `ID Lead` (col B vacía) son agendas automáticas generadas por el sistema de cargas. **Regla**: si `ID Lead` está vacío → la agenda no cuenta para la tarjeta de gestiones ni para el Top Soc Gestionadas.
+> **Agendas automáticas sin ID Lead (2026-05-15)**: Las entradas de la hoja **Agenda** sin `ID Lead` (col B vacía) son agendas automáticas generadas por el sistema de cargas. **Regla**: si `ID Lead` está vacío → la agenda no cuenta para la tarjeta de gestiones ni para el Top Soc Gestionadas.
+
+> [!NOTE]
+> **Agendas automáticas con patrón Carga \d+ (2026-05-16)**: Aunque tengan `ID Lead`, si el **Resumen Evento (col G)** empieza con `Carga ` seguido de un número (ej: `Carga 31058 - RACIONES ARGENTINAS S.A.`) → la agenda se descarta. Regex: `/^Carga \d+/`. Nota: `carga` con minúscula o texto distinto NO se descarta.
 
 > [!NOTE]
 > **Filas NR vacías en Sin Gestión (2026-05-15)**: El loop de `D.estados` puede producir entradas sin `soc` ni `fa` (registros incompletos del CRM con fuente `NR`). Se filtran en `ssgAll` con `.filter(s => s && (s.soc || s.fa))` antes de armar `ssgTop5` y el contador `socSinGestNum`.
 
 > [!NOTE]
-> **F. ASIG. con fallback desde Leads (2026-05-15)**: La fecha de asignación en `Top Soc. Sin Gestión` viene de la col F del sheet **Estados**. Si está vacía, se usa como fallback la col B del sheet **Leads** (mismo `idLead`). `leadsMapByLead` ahora incluye `fa`.
+> **F. ASIG. — prioridad Leads sobre Estados (2026-05-15/16)**: La fecha de asignación en `Top Soc. Sin Gestión` se resuelve como `leadInfo.fa || row[1] || ''`. Primero col B de **Leads** (más confiable), luego col F de **Estados** como fallback. La prioridad fue invertida el 16/05.
 
 > [!NOTE]
-> **Formato ULT ACT. (2026-05-15)**: La columna `Ult Act.` en `Top Soc. Sin Gestión` ahora pasa por `fDDash()` igual que `F. Asig.`, mostrando `dd-MM-yyyy` en lugar del formato raw `yyyyMMdd`.
+> **Nombre+Apellido como fallback de Razón Social (2026-05-16)**: En el sheet **Leads**, si col M (Razón Social) está vacía, se usa `Nombre (col E) + Apellido (col F)` como nombre de display. Así los leads de personas físicas (sin empresa) muestran el nombre del contacto en lugar de `-`.
+
+> [!NOTE]
+> **Formato ULT ACT. (2026-05-15)**: La columna `Ult Act.` en `Top Soc. Sin Gestión` y su modal pasan por `fDDash()`, mostrando `dd-MM-yyyy` en lugar del formato raw `yyyyMMdd`.
+
+> [!NOTE]
+> **Modal Top Negocios de la Semana (2026-05-16)**: Al hacer click en el título `Top Negocios de la Semana` se abre un **modal flotante** (no el side panel). Usa `tblOpsModal()` que es idéntica a `tblOps()` pero agrega una columna **Rend.** con badge coloreado (verde >2%, amarillo >0%, rojo <0%). Los outliers `|rend|>=25%` muestran `—`. El click en el gráfico de evolución sigue usando el side panel.
+
+> [!NOTE]
+> **Ranking Semanal — default Operadas y sort por Rend. (2026-05-16)**: La primera carga del ranking muestra la pestaña **Operadas** (antes Ofrecidas). El header `Rend.` es clickeable y ordena descendente por rendimiento ponderado (outliers al final). El header `Cabezas` es clickeable y vuelve al orden por cabezas. El estado `sortBy` se persiste en `LAST_PANEL_STATE` para sobrevivir cambios de AC.
+
+> [!NOTE]
+> **Semana anterior en Sábado y Domingo (2026-05-16)**: En `popSem()`, si el día actual es Sábado (6) o Domingo (0), la semana seleccionada por defecto es la semana anterior (`lookupDate = now - 7 días`). De Lunes a Viernes se muestra la semana en curso. El usuario puede cambiar manualmente en cualquier momento.
 
 ---
 
