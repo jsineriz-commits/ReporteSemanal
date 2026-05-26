@@ -30,11 +30,44 @@ module.exports = async (req, res) => {
   try {
     console.log(`[generatePDF] Iniciando para: ${ac} | sem: ${semana || '?'}`);
 
+    // ── Detectar entorno: Vercel (serverless) vs local ──────────────────────
+    let launchArgs, executablePath;
+
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      // Producción (Vercel / Lambda): usar @sparticuz/chromium
+      launchArgs = chromium.args;
+      executablePath = await chromium.executablePath();
+      console.log('[generatePDF] Modo: Vercel/Lambda — usando @sparticuz/chromium');
+    } else {
+      // Local: buscar Chrome/Chromium instalado en el sistema
+      const fs = require('fs');
+      const localPaths = [
+        process.env.CHROME_PATH,                                                        // override manual
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',                  // Windows — Chrome
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files\\Chromium\\Application\\chrome.exe',
+        '/usr/bin/google-chrome',                                                       // Linux
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',                // macOS
+      ].filter(Boolean);
+
+      executablePath = localPaths.find(p => fs.existsSync(p));
+      if (!executablePath) {
+        return res.status(500).json({
+          ok: false,
+          error: 'No se encontró Chrome/Chromium instalado. Instalalo o definí CHROME_PATH en .env.local apuntando al ejecutable.',
+        });
+      }
+      launchArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
+      console.log(`[generatePDF] Modo: local — usando Chrome en: ${executablePath}`);
+    }
+
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args: launchArgs,
       defaultViewport: { width: 1280, height: 900 },
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      executablePath,
+      headless: true,
     });
 
     const page = await browser.newPage();
