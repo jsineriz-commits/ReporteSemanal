@@ -40,7 +40,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Endpoints de la API (equivalente a las Serverless Functions de Vercel)
-const endpoints = ['getConfig', 'getReport', 'refreshCacheAndWarmup', 'warmUp', 'sendEmailWithPDF'];
+const endpoints = ['getConfig', 'getConfigData', 'getReport', 'refreshCacheAndWarmup', 'warmUp', 'sendEmailWithPDF', 'generatePDF', 'clearCache'];
 
 endpoints.forEach(ep => {
   app.all(`/api/${ep}`, async (req, res) => {

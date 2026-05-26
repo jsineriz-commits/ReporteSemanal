@@ -18,13 +18,13 @@ module.exports = async (req, res) => {
     });
   }
 
-  const APP_URL = process.env.APP_URL;
-  if (!APP_URL) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Variable de entorno APP_URL no configurada.',
-    });
-  }
+  const APP_URL = process.env.APP_URL || (() => {
+    // Auto-detectar la URL base desde el propio request
+    // → funciona en local (http://localhost:4000) y en Vercel (https://tu-app.vercel.app)
+    const proto = req.headers['x-forwarded-proto'] || (req.socket?.encrypted ? 'https' : 'http');
+    const host  = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:4000';
+    return `${proto}://${host}`;
+  })();
 
   let browser;
   try {
