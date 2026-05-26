@@ -14,3 +14,6 @@ update_q101.js
 update_q102.js
 old_logic.js
 test_headers.js
+.claude/
+test_reporte.pdf
+*.pdf

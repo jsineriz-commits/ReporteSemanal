@@ -2,6 +2,10 @@
 // Reemplaza sendEmailWithPDF() de Apps Script.
 // Recibe el PDF ya generado en el frontend (base64) y lo envía por email.
 // Si hay folderId, también lo guarda en Drive.
+//
+// MODO TEST: si el body incluye `testEmail`, el mail se redirige a esa
+// dirección (ignorando email/cc reales) y el asunto lleva [TEST].
+// Útil para probar el flujo de n8n sin enviar emails a los comerciales.
 
 const { sendEmail, saveToDrive } = require('./_lib/mailer');
 
@@ -9,9 +13,7 @@ const { sendEmail, saveToDrive } = require('./_lib/mailer');
 function extractFolderId(raw) {
   if (!raw) return '';
   const s = String(raw).trim();
-  // Si ya es un ID puro (sin slash), devolverlo
   if (!s.includes('/')) return s;
-  // Extraer el ID del link: .../folders/ID o .../folders/ID?...
   const m = s.match(/\/folders\/([a-zA-Z0-9_-]+)/);
   return m ? m[1] : s;
 }
@@ -19,7 +21,7 @@ function extractFolderId(raw) {
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { comercial, email, cc, folderId, pdfBase64, fileName, bodyText } = req.body || {};
+  const { comercial, email, cc, folderId, pdfBase64, fileName, bodyText, testEmail } = req.body || {};
 
   if (!email || !String(email).trim()) {
     return res.status(400).json({ ok: false, error: 'Email vacío para ' + (comercial || '?') });
@@ -28,13 +30,23 @@ module.exports = async (req, res) => {
     return res.status(400).json({ ok: false, error: 'pdfBase64 vacío.' });
   }
 
+  // ── Modo test: redirigir a testEmail ─────────────────────────────────────
+  const isTest     = !!testEmail && String(testEmail).includes('@');
+  const toFinal    = isTest ? String(testEmail).trim() : String(email).trim();
+  const ccFinal    = isTest ? ''                       : (cc ? String(cc).trim() : '');
+  const subjectPfx = isTest ? '[TEST] '               : '';
+
+  if (isTest) {
+    console.log(`[api/sendEmailWithPDF] MODO TEST → redirigiendo email de "${email}" a "${toFinal}"`);
+  }
+
   try {
     const pdfBuffer = Buffer.from(pdfBase64, 'base64');
 
-    // Guardar en Drive (no-op si no hay folderId o falla)
+    // Guardar en Drive (en modo test se omite para no crear archivos de prueba)
     let driveOk = false, driveError = null;
     const cleanFolderId = extractFolderId(folderId);
-    if (cleanFolderId) {
+    if (cleanFolderId && !isTest) {
       try {
         await saveToDrive(cleanFolderId, fileName, pdfBuffer);
         driveOk = true;
@@ -43,23 +55,25 @@ module.exports = async (req, res) => {
         driveError = driveErr.message;
         console.warn('[api/sendEmailWithPDF] Drive error (no crítico):', driveErr.message, '| folderId:', cleanFolderId);
       }
-    } else {
+    } else if (!cleanFolderId) {
       driveError = 'folderId vacío o inválido';
       console.warn('[api/sendEmailWithPDF] Sin folderId para', comercial);
+    } else {
+      driveError = 'omitido en modo test';
     }
 
     // Enviar email
     await sendEmail({
-      to:         String(email).trim(),
-      cc:         cc ? String(cc).trim() : '',
-      subject:    'Reporte Semanal - ' + (comercial || ''),
-      text:       bodyText || '',
+      to:      toFinal,
+      cc:      ccFinal,
+      subject: `${subjectPfx}Reporte Semanal - ${comercial || ''}`,
+      text:    bodyText || '',
       pdfBuffer,
-      fileName:   fileName || 'reporte.pdf',
+      fileName: fileName || 'reporte.pdf',
     });
 
-    console.log('[api/sendEmailWithPDF] OK: mail enviado a', email, 'para', comercial);
-    res.json({ ok: true, driveOk, driveError });
+    console.log(`[api/sendEmailWithPDF] OK: mail enviado a ${toFinal} (${isTest ? 'TEST' : 'real'}) para ${comercial}`);
+    res.json({ ok: true, driveOk, driveError, isTest });
   } catch (e) {
     console.error('[api/sendEmailWithPDF] ERROR [' + (comercial || '') + ']:', e.message);
     res.status(500).json({ ok: false, error: e.message });
