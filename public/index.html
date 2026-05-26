@@ -1384,6 +1384,25 @@
   <script>
     var CFG = null, DIAS = ['Sab', 'Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie'], L_CACHE = {}, LAST_CHART_SERIES = null, LAST_OPER_SERIES = null, CURRENT_DATA = null, LAST_PANEL_STATE = null;
 
+    // ── URL Params (para generación automática vía Puppeteer / n8n) ──────────
+    var URL_PARAMS = (function () {
+      var p = new URLSearchParams(window.location.search);
+      return {
+        ac:       p.get('ac')       || '',
+        startTs:  p.get('startTs')  ? Number(p.get('startTs')) : 0,
+        endTs:    p.get('endTs')    ? Number(p.get('endTs'))   : 0,
+        pdfMode:  p.get('pdfMode') === '1',
+      };
+    })();
+
+    // En modo PDF: ocultar navbar y controles de UI para captura limpia
+    if (URL_PARAMS.pdfMode) {
+      document.documentElement.style.setProperty('--ctrl-display', 'none');
+      var _pdfStyle = document.createElement('style');
+      _pdfStyle.textContent = '.ctrl { display: none !important; } .side-panel { display: none !important; } .main-layout { padding-top: 8px !important; }';
+      document.head.appendChild(_pdfStyle);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
       slo(true, 'Iniciando...');
       google.script.run
@@ -1462,7 +1481,54 @@
       popSem();
       google.script.run.warmup();
       updateNavBtns();
-      // Auto-seleccionar el primer AC y generar el reporte
+
+      // ── Modo automático: URL params presentes (?ac=...&startTs=...&endTs=...)
+      if (URL_PARAMS.ac && URL_PARAMS.startTs && URL_PARAMS.endTs) {
+        // Buscar el AC en el selector
+        var found = false;
+        for (var oi = 0; oi < sel.options.length; oi++) {
+          if (sel.options[oi].value === URL_PARAMS.ac) {
+            sel.selectedIndex = oi;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          eid('empty').innerHTML = '<div class="err-box"><b>AC no encontrado:</b> ' + URL_PARAMS.ac + '</div>';
+          slo(false);
+          return;
+        }
+        // Buscar la semana que contenga el rango startTs-endTs
+        var selSem = eid('selSem');
+        var bestSemVal = '';
+        for (var si = 0; si < selSem.options.length; si++) {
+          var parts = selSem.options[si].value.split('|');
+          if (parts.length >= 3) {
+            var sTs = Number(parts[1]), eTs = Number(parts[2]);
+            if (URL_PARAMS.startTs >= sTs && URL_PARAMS.endTs <= eTs + 86400000) {
+              bestSemVal = selSem.options[si].value;
+              break;
+            }
+          }
+        }
+        // Si no matchea exacto, construir un valor sintético con los timestamps recibidos
+        if (!bestSemVal && selSem.options.length > 0) {
+          var syntheticOpt = document.createElement('option');
+          syntheticOpt.value = '?|' + URL_PARAMS.startTs + '|' + URL_PARAMS.endTs + '|?';
+          syntheticOpt.textContent = 'Semana (automática)';
+          selSem.appendChild(syntheticOpt);
+          bestSemVal = syntheticOpt.value;
+        }
+        if (bestSemVal) selSem.value = bestSemVal;
+        updateNavBtns();
+        eid('rpt').innerHTML = initTemplateSkeletons();
+        eid('rpt').style.display = 'block';
+        eid('empty').style.display = 'none';
+        autoGen();
+        return;
+      }
+
+      // ── Modo normal: auto-seleccionar el primer AC
       if (sel.options.length > 1) {
         sel.selectedIndex = 1;
         updateNavBtns();

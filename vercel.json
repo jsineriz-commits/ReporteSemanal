@@ -12,6 +12,7 @@
     "api/getReport.js":             { "maxDuration": 60 },
     "api/warmUp.js":                { "maxDuration": 60 },
     "api/refreshCacheAndWarmup.js": { "maxDuration": 60 },
-    "api/sendEmailWithPDF.js":      { "maxDuration": 60 }
+    "api/sendEmailWithPDF.js":      { "maxDuration": 60 },
+    "api/generatePDF.js":           { "maxDuration": 60, "memory": 1024 }
   }
 }
