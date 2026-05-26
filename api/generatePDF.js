@@ -93,12 +93,18 @@ module.exports = async (req, res) => {
 
     console.log(`[generatePDF] Reporte renderizado, capturando PDF...`);
 
+    // Medir la altura real del reporte para generar un PDF de una sola página
+    const contentHeightPx = await page.evaluate(() => {
+      var rpt = document.getElementById('rpt');
+      return rpt ? rpt.scrollHeight : document.body.scrollHeight;
+    });
+    const heightMm = Math.ceil(contentHeightPx * 0.264583) + 20; // px → mm + margen
+
     const pdfBuffer = await page.pdf({
       printBackground: true,
-      width: '1030px',   // PDF_WIDTH (980px) + márgenes
-      height: 'auto',
+      width: '1010px',
+      height: `${heightMm}mm`,
       margin: { top: '10px', right: '10px', bottom: '10px', left: '10px' },
-      pageRanges: '1',
     });
 
     const semStr = semana ? String(semana) : (() => {
