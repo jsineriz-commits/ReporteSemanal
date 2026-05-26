@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmar envío de reportes — De Campo a Campo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+      max-width: 480px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    /* Header de la card */
+    .card-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      padding: 32px 32px 28px;
+      text-align: center;
+    }
+    .logo {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .card-header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .card-header p {
+      margin-top: 8px;
+      font-size: 13.5px;
+      color: #94a3b8;
+    }
+
+    /* Cuerpo */
+    .card-body {
+      padding: 28px 32px 32px;
+    }
+
+    /* Stats pills */
+    .stats {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      flex: 1;
+      min-width: 110px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px 14px;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1e293b;
+      line-height: 1;
+    }
+    .stat-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+
+    /* Advertencia */
+    .warning-box {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #92400e;
+      line-height: 1.45;
+    }
+    .warning-box .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    /* Botón principal */
+    .btn-confirm {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+      letter-spacing: -0.2px;
+    }
+    .btn-confirm:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.45);
+    }
+    .btn-confirm:active:not(:disabled) { transform: translateY(0); }
+    .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Estado de carga */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Estado éxito */
+    .state-success {
+      display: none;
+      text-align: center;
+      animation: fadeIn 0.4s ease;
+    }
+    .state-success .check {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, #059669, #10b981);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      margin: 0 auto 16px;
+      box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+    }
+    .state-success h2 { font-size: 20px; font-weight: 800; color: #1e293b; }
+    .state-success p  { font-size: 14px; color: #64748b; margin-top: 8px; line-height: 1.5; }
+
+    /* Estado error */
+    .state-error {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #991b1b;
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* Error de config (sin resumeUrl) */
+    .state-config-error {
+      text-align: center;
+      padding: 16px 0;
+    }
+    .state-config-error .icon { font-size: 40px; margin-bottom: 12px; }
+    .state-config-error h2 { font-size: 18px; font-weight: 700; color: #1e293b; }
+    .state-config-error p  { font-size: 13px; color: #64748b; margin-top: 8px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Footer */
+    .page-footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <div class="logo">De Campo a Campo</div>
+    <h1>Envío de Reportes Semanales</h1>
+    <p id="header-sub">Confirmá para iniciar el envío automático</p>
+  </div>
+
+  <div class="card-body">
+
+    <!-- Estado principal (antes de confirmar) -->
+    <div id="state-main">
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-val" id="stat-semana">—</div>
+          <div class="stat-lbl">Semana</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="stat-count">—</div>
+          <div class="stat-lbl">Comerciales</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="stat-anio">—</div>
+          <div class="stat-lbl">Año</div>
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <span class="icon">⚠️</span>
+        <span>Esta acción enviará los reportes PDF a <strong>todos los comerciales</strong> listados. No se puede deshacer.</span>
+      </div>
+
+      <button class="btn-confirm" id="btn-confirm" onclick="confirmar()">
+        Confirmar y enviar reportes
+      </button>
+
+      <div class="state-error" id="state-error"></div>
+
+    </div>
+
+    <!-- Estado config error (sin resumeUrl) -->
+    <div class="state-config-error" id="state-config-error" style="display:none">
+      <div class="icon">🔗</div>
+      <h2>Link inválido</h2>
+      <p>Este link no tiene los parámetros necesarios.<br>Usá el link que llegó por Slack.</p>
+    </div>
+
+    <!-- Estado éxito -->
+    <div class="state-success" id="state-success">
+      <div class="check">✓</div>
+      <h2>¡Reportes en camino!</h2>
+      <p>El envío fue confirmado correctamente.<br>Los comerciales recibirán sus reportes en los próximos minutos.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="page-footer">Reporte Semanal · De Campo a Campo</div>
+
+<script>
+  // Leer parámetros de la URL
+  const params   = new URLSearchParams(window.location.search);
+  const resumeUrl = params.get('resumeUrl');
+  const semana    = params.get('semana')  || '—';
+  const anio      = params.get('anio')    || new Date().getFullYear();
+  const count     = params.get('count')   || '—';
+
+  // Rellenar stats
+  document.getElementById('stat-semana').textContent = semana;
+  document.getElementById('stat-count').textContent  = count;
+  document.getElementById('stat-anio').textContent   = anio;
+
+  // Verificar que el link tenga el resumeUrl
+  if (!resumeUrl) {
+    document.getElementById('state-main').style.display        = 'none';
+    document.getElementById('state-config-error').style.display = 'block';
+  }
+
+  async function confirmar() {
+    const btn = document.getElementById('btn-confirm');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Iniciando envío...';
+
+    try {
+      // Llamar al resume URL de n8n
+      const res = await fetch(resumeUrl, { method: 'GET' });
+
+      if (res.ok || res.status === 200) {
+        // Éxito
+        document.getElementById('state-main').style.display   = 'none';
+        document.getElementById('state-success').style.display = 'block';
+      } else {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`Error ${res.status}: ${txt || res.statusText}`);
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Confirmar y enviar reportes';
+      const errEl = document.getElementById('state-error');
+      errEl.style.display = 'block';
+      errEl.textContent = '❌ ' + (err.message || 'Error al conectar con el servidor.');
+    }
+  }
+</script>
+</body>
+</html>
