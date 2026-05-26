@@ -201,15 +201,15 @@ module.exports = async (req, res) => {
     // ════════════════════════════════════════════════════════════════════════
     // KPIs PRINCIPALES
     // ════════════════════════════════════════════════════════════════════════
-    y = sectionHeader(doc, '📊 Métricas principales', y, '#1e3a5f');
+    y = sectionHeader(doc, 'METRICAS PRINCIPALES', y, '#1e3a5f');
 
     const cardW = (usableW - 12) / 4;
     const cardH = 58;
     const kpis  = [
-      { label: 'Cab. Ofrecidas',  value: n(d.cab),  sub: 'Tropas', subV: n(d.trop),    color: C.primary  },
-      { label: 'Cab. Operadas',   value: n(d.cabC), sub: 'Tropas', subV: n(d.cabCWeekTrop), color: C.success  },
-      { label: 'Cargas asistidas',value: n(d.carg), sub: 'Propias',subV: n(d.cargProp), color: C.teal     },
-      { label: 'Soc. Gest. CRM',  value: n(d.tSG),  sub: 'Nuevas', subV: n(d.nuevas),  color: C.purple   },
+      { label: 'Cab. Ofrecidas',   value: n(d.cab),      sub: 'Tropas',  subV: n(d.trop),    color: C.primary  },
+      { label: 'Cab. Concretadas', value: n(d.cabConc),  sub: 'No Conc.',subV: n(d.cabNoConc||0), color: C.success  },
+      { label: 'Cargas asistidas', value: n(d.carg),     sub: 'Propias', subV: n(d.cargProp), color: C.teal     },
+      { label: 'Soc. Gest. CRM',   value: n(d.tSG),      sub: 'Nuevas',  subV: n(d.nuevas),   color: C.purple   },
     ];
     kpis.forEach((k, i) => {
       kpiCard(doc, k.label, k.value, k.sub, k.subV,
@@ -243,7 +243,7 @@ module.exports = async (req, res) => {
     // ════════════════════════════════════════════════════════════════════════
     // DISTRIBUCIÓN DIARIA
     // ════════════════════════════════════════════════════════════════════════
-    y = sectionHeader(doc, '📅 Distribución diaria', y + 4, '#1e3a5f');
+    y = sectionHeader(doc, 'DISTRIBUCION DIARIA', y + 4, '#1e3a5f');
     const halfW = (usableW - 8) / 2;
 
     // Ofrecidas por día
@@ -269,7 +269,7 @@ module.exports = async (req, res) => {
     // EVOLUCIÓN DE OPERACIONES (últimas semanas)
     // ════════════════════════════════════════════════════════════════════════
     if (d.operSemMesLabels?.length) {
-      y = sectionHeader(doc, '📈 Evolución de operaciones', y + 2, '#1e3a5f');
+      y = sectionHeader(doc, 'EVOLUCION DE OPERACIONES', y + 2, '#1e3a5f');
       const evoHeaders = [...d.operSemMesLabels, 'TOTAL'];
       const colW = Math.min(60, (usableW - 40) / evoHeaders.length);
       const evoWidths = evoHeaders.map(() => colW);
@@ -283,7 +283,7 @@ module.exports = async (req, res) => {
     // TOP NEGOCIOS
     // ════════════════════════════════════════════════════════════════════════
     if (d.top5?.length) {
-      y = sectionHeader(doc, '🏆 Principales negocios de la semana', y + 2, '#1e3a5f');
+      y = sectionHeader(doc, 'PRINCIPALES NEGOCIOS DE LA SEMANA', y + 2, '#1e3a5f');
       const tHeaders = ['ID', 'UN', 'SOC. VENDEDORA', 'SOC. COMPRADORA', 'FECHA', 'Q', 'Kt', 'Kv'];
       const tWidths  = [40, 32, 110, 110, 46, 30, 28, 28];
       const tRows    = d.top5.map(op => {
@@ -311,7 +311,7 @@ module.exports = async (req, res) => {
       // Nueva página si queda poco espacio
       if (y > 650) { doc.addPage(); y = 30; }
 
-      y = sectionHeader(doc, '🤝 CRM — Gestión de Sociedades', y + 4, '#4c1d95');
+      y = sectionHeader(doc, 'CRM — GESTION DE SOCIEDADES', y + 4, '#4c1d95');
 
       // KPIs CRM en fila
       const crmKpis = [
@@ -379,7 +379,7 @@ module.exports = async (req, res) => {
     // ════════════════════════════════════════════════════════════════════════
     if (d.sacsTable?.length) {
       if (y > 660) { doc.addPage(); y = 30; }
-      y = sectionHeader(doc, `📋 SACs (${d.sacsTable.length}) — Aprobados: ${d.sacAprob} · Rechazados: ${d.sacRech} · Pendientes: ${d.sacPend}`, y + 4, '#1e4d6b');
+      y = sectionHeader(doc, `SACs (${d.sacsTable.length}) — Aprobados: ${d.sacAprob} - Rechazados: ${d.sacRech} - Pendientes: ${d.sacPend}`, y + 4, '#1e4d6b');
       const sacHeaders = ['SOCIEDAD', 'FECHA', 'ESTADO', 'JD Solicitud', 'JD Aprobación', 'UN'];
       const sacWidths  = [175, 55, 65, 80, 80, 60];
       const sacRows    = d.sacsTable.map(s => [
@@ -401,7 +401,7 @@ module.exports = async (req, res) => {
     // ════════════════════════════════════════════════════════════════════════
     if (d.detOf?.length) {
       if (y > 620) { doc.addPage(); y = 30; }
-      y = sectionHeader(doc, `📄 Detalle ofrecidas (${d.detOf.length})`, y + 4, '#1e3a5f');
+      y = sectionHeader(doc, `DETALLE OFRECIDAS (${d.detOf.length})`, y + 4, '#1e3a5f');
       const ofHeaders = ['ID', 'FECHA', 'SOCIEDAD', 'Q', 'UN', 'EST', 'Kt', 'Kv'];
       const ofWidths  = [40, 50, 160, 30, 50, 28, 44, 113];
       const ofRows    = d.detOf.map(o => [
@@ -423,7 +423,7 @@ module.exports = async (req, res) => {
     // ════════════════════════════════════════════════════════════════════════
     if (d.detC?.length) {
       if (y > 620) { doc.addPage(); y = 30; }
-      y = sectionHeader(doc, `📄 Detalle operadas (${d.detC.length})`, y + 4, '#1e3a5f');
+      y = sectionHeader(doc, `DETALLE OPERADAS (${d.detC.length})`, y + 4, '#1e3a5f');
       const dcHeaders = ['ID', 'FECHA', 'SOC. COMPRADORA', 'Q', 'UN', 'Kt', 'Kv'];
       const dcWidths  = [40, 50, 180, 30, 60, 44, 111];
       const dcRows    = d.detC.map(o => [
@@ -444,7 +444,7 @@ module.exports = async (req, res) => {
     // ════════════════════════════════════════════════════════════════════════
     if (d.detCarg?.length) {
       if (y > 620) { doc.addPage(); y = 30; }
-      y = sectionHeader(doc, `🚛 Detalle cargas (${d.detCarg.length})`, y + 4, '#1e3a5f');
+      y = sectionHeader(doc, `DETALLE CARGAS (${d.detCarg.length})`, y + 4, '#1e3a5f');
       const cHeaders = ['ID', 'FECHA', 'SOCIEDAD', 'Q', 'UN', 'Kt', 'Kv'];
       const cWidths  = [40, 50, 180, 30, 60, 44, 111];
       const cRows    = d.detCarg.map(o => [
