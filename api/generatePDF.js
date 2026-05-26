@@ -3,7 +3,6 @@
 // Recibe { ac, startTs, endTs, semana } y devuelve { ok, pdfBase64, fileName }.
 // Usa @sparticuz/chromium (~45MB comprimido) optimizado para entornos serverless.
 
-const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 
 module.exports = async (req, res) => {
@@ -30,45 +29,46 @@ module.exports = async (req, res) => {
   try {
     console.log(`[generatePDF] Iniciando para: ${ac} | sem: ${semana || '?'}`);
 
-    // ── Detectar entorno: Vercel (serverless) vs local ──────────────────────
-    let launchArgs, executablePath;
+    // ── Detectar entorno ────────────────────────────────────────────────────
+    let browser;
 
-    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-      // Producción (Vercel / Lambda): usar @sparticuz/chromium
-      launchArgs = chromium.args;
-      executablePath = await chromium.executablePath();
-      console.log('[generatePDF] Modo: Vercel/Lambda — usando @sparticuz/chromium');
+    if (process.env.BROWSERLESS_TOKEN) {
+      // Producción: Browserless.io — Chrome managed en la nube
+      // No requiere librerías de sistema en Vercel
+      console.log('[generatePDF] Modo: Browserless.io');
+      browser = await puppeteer.connect({
+        browserWSEndpoint: `wss://production-sfo.browserless.io?token=${process.env.BROWSERLESS_TOKEN}`,
+      });
+
     } else {
-      // Local: buscar Chrome/Chromium instalado en el sistema
+      // Local dev: buscar Chrome/Chromium instalado en el sistema
       const fs = require('fs');
       const localPaths = [
-        process.env.CHROME_PATH,                                                        // override manual
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',                  // Windows — Chrome
+        process.env.CHROME_PATH,
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
         'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files\\Chromium\\Application\\chrome.exe',
-        '/usr/bin/google-chrome',                                                       // Linux
+        '/usr/bin/google-chrome',
         '/usr/bin/chromium-browser',
         '/usr/bin/chromium',
-        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',                // macOS
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
       ].filter(Boolean);
 
-      executablePath = localPaths.find(p => fs.existsSync(p));
+      const executablePath = localPaths.find(p => fs.existsSync(p));
       if (!executablePath) {
         return res.status(500).json({
           ok: false,
-          error: 'No se encontró Chrome/Chromium instalado. Instalalo o definí CHROME_PATH en .env.local apuntando al ejecutable.',
+          error: 'Local: no se encontró Chrome. Definí CHROME_PATH en .env.local o configurá BROWSERLESS_TOKEN para producción.',
         });
       }
-      launchArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
-      console.log(`[generatePDF] Modo: local — usando Chrome en: ${executablePath}`);
+      console.log(`[generatePDF] Modo: local — Chrome en: ${executablePath}`);
+      browser = await puppeteer.launch({
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        defaultViewport: { width: 1280, height: 900 },
+        executablePath,
+        headless: true,
+      });
     }
 
-    browser = await puppeteer.launch({
-      args: launchArgs,
-      defaultViewport: { width: 1280, height: 900 },
-      executablePath,
-      headless: true,
-    });
 
     const page = await browser.newPage();
 
