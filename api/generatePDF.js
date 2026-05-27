@@ -1138,15 +1138,26 @@ function makeDoc(pageH, fontsDir, hasInter) {
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
 
-  const { ac, startTs, endTs, semana } = req.body || {};
-  if (!ac || !startTs || !endTs) {
-    return res.status(400).json({ ok: false, error: 'Faltan parámetros: ac, startTs, endTs' });
+  const { ac, startTs, endTs, semana, data } = req.body || {};
+  if (!ac) {
+    return res.status(400).json({ ok: false, error: 'Falta parámetro: ac' });
   }
 
   try {
-    console.log(`[generatePDF] Obteniendo datos para: ${ac} | sem: ${semana || '?'}`);
-    const d = await getReport(ac, Number(startTs), Number(endTs));
-    if (!d || d.error) throw new Error(d?.error || 'getReport devolvió datos vacíos');
+    let d;
+    if (data && typeof data === 'object') {
+      // ── MODO RÁPIDO: datos pre-cargados por n8n (sin llamada a Metabase) ──
+      console.log(`[generatePDF] Usando datos pre-cargados para: ${ac} | sem: ${semana || '?'}`);
+      d = data;
+    } else {
+      // ── MODO NORMAL: buscar datos en getReport ────────────────────────────
+      if (!startTs || !endTs) {
+        return res.status(400).json({ ok: false, error: 'Faltan parámetros: startTs, endTs (o enviá data directamente)' });
+      }
+      console.log(`[generatePDF] Obteniendo datos para: ${ac} | sem: ${semana || '?'}`);
+      d = await getReport(ac, Number(startTs), Number(endTs));
+      if (!d || d.error) throw new Error(d?.error || 'getReport devolvió datos vacíos');
+    }
 
     console.log(`[generatePDF] Generando PDF con PDFKit...`);
 
