@@ -218,11 +218,21 @@ async function loadData(forceRefresh) {
       _bcfullMap.clear();
       for (const [cuit, val] of Object.entries(red.bcMapObj)) _bcfullMap.set(cuit, val);
       _bcfullState = 'done';
-      const [comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw] = await Promise.all([
-        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
-        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
-        getSheetDataFrom(CRM_SPREADSHEET_ID, 'Estados'), getSheetData('SAC'),
-      ]);
+
+      let comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw;
+      if (red.sheets) {
+        // v3: Sheets incluidos en el blob — sin I/O adicional ✅
+        console.log('[logic] loadData: Sheets desde blob cache (sin fetch extra)');
+        ({ comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw } = red.sheets);
+      } else {
+        // Blob antiguo (v2) sin Sheets — fetcher como antes
+        console.log('[logic] loadData: Sheets no en blob, fetch directo...');
+        [comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw] = await Promise.all([
+          getSheetDataFrom(CRM_SPREADSHEET_ID, 'Comentarios'), getSheetDataFrom(CRM_SPREADSHEET_ID, 'Agenda'),
+          getSheetDataFrom(CRM_SPREADSHEET_ID, 'Leads'),
+          getSheetDataFrom(CRM_SPREADSHEET_ID, 'Estados'), getSheetData('SAC'),
+        ]);
+      }
       return _processLoadData(red.metaBase, red.metaOps, comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw, red.ts);
     }
   }
@@ -242,7 +252,7 @@ async function loadData(forceRefresh) {
     }
   }
 
-  // ── 3. Fetch fresco desde Metabase ────────────────────────────────────────
+  // ── 3. Fetch fresco desde Metabase + Sheets ───────────────────────────────
   console.log('[logic] loadData: fetch fresco Q101+Q102+Q221 + Sheets...');
   const [metaBase, metaOps, metaEstab, comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw] = await Promise.all([
     fetchMetabaseQuery(101), fetchMetabaseQuery(102), fetchMetabaseQuery(221),
@@ -258,7 +268,9 @@ async function loadData(forceRefresh) {
 
   let savedTs;
   if (useBlob) {
-    savedTs = await blobCache.writeCache(metaBase, metaOps, bcMapObj);
+    // v3: guardar también los Sheets en blob
+    const sheets = { comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw };
+    savedTs = await blobCache.writeCache(metaBase, metaOps, bcMapObj, sheets);
   } else {
     savedTs = diskCache.writeCache({ metaBase, metaOps, metaEstab });
   }

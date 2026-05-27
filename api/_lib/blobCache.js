@@ -1,6 +1,9 @@
 // api/_lib/blobCache.js
-// Cache persistente en Vercel Blob para datos de Metabase.
+// Cache persistente en Vercel Blob para datos de Metabase + Sheets.
 // TTL: 24 horas. Sin dependencias npm extra — usa fetch directamente.
+//
+// v3: almacena también los datos crudos de Google Sheets para evitar
+// que loadData tenga que leer 5 hojas en cada invocación.
 
 const zlib = require('zlib');
 const { promisify } = require('util');
@@ -10,7 +13,7 @@ const gunzipAsync = promisify(zlib.gunzip);
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const BLOB_API   = 'https://blob.vercel-storage.com';
 const API_VER    = '7';
-const CACHE_NAME = 'rs-mc-v2.gz'; // v2: evita conflicto con blob público previo
+const CACHE_NAME = 'rs-mc-v3.gz'; // v3: incluye Sheets raw
 const TTL_MS     = 24 * 60 * 60 * 1000; // 24h
 
 function isConfigured() { return !!BLOB_TOKEN; }
@@ -47,11 +50,18 @@ async function readCache() {
 }
 
 // ─── writeCache ───────────────────────────────────────────────────────────────
-async function writeCache(metaBase, metaOps, bcMapObj) {
+// metaBase, metaOps, bcMapObj: datos de Metabase (como antes)
+// sheets: { comsRaw, agendasRaw, leadsRaw, estadosRaw, sacsRaw } — NUEVO en v3
+async function writeCache(metaBase, metaOps, bcMapObj, sheets) {
   if (!isConfigured()) return null;
   try {
     const ts      = Date.now();
-    const buf     = await gzipAsync(JSON.stringify({ ts, metaBase, metaOps, bcMapObj }));
+    const payload = { ts, metaBase, metaOps, bcMapObj };
+    // Guardar Sheets si se proveen (no obligatorio para retrocompatibilidad)
+    if (sheets && typeof sheets === 'object') {
+      payload.sheets = sheets;
+    }
+    const buf     = await gzipAsync(JSON.stringify(payload));
     const mb      = (buf.length / 1048576).toFixed(1);
     // Borrar blob previo para evitar conflicto de access level
     await deleteCache();
@@ -66,7 +76,8 @@ async function writeCache(metaBase, metaOps, bcMapObj) {
       body: buf,
     });
     if (!res.ok) throw new Error(`Blob PUT HTTP ${res.status}: ${await res.text()}`);
-    console.log(`[blobCache] Guardado (${mb} MB gzip) — expira en 24h`);
+    const sheetsNote = sheets ? ' + Sheets' : '';
+    console.log(`[blobCache] Guardado (${mb} MB gzip, Metabase${sheetsNote}) — expira en 24h`);
     return ts;
   } catch (e) { console.error('[blobCache] Error al escribir:', e.message); return null; }
 }
