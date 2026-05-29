@@ -80,17 +80,21 @@ function _ensureBcfull(cachedEstab) {
 // Todos los formatos se calculan en UTC (consistente con la conversión de seriales).
 
 function parseSheetDate(val) {
-  if (val === null || val === undefined || val === '') return null;
-  if (val instanceof Date) return val;
+  if (!val) return null;
   if (typeof val === 'number') {
-    if (val <= 0 || val > 2958466) return null;
-    return new Date((val - 25569) * 86400000 + 43200000); // UTC noon
-  }
-  if (typeof val === 'string') {
-    const d = new Date(val);
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
     return isNaN(d.getTime()) ? null : d;
   }
-  return null;
+  if (typeof val === 'string') {
+    const parts = val.split('/');
+    if (parts.length === 3 && parts[0].length <= 2 && parts[1].length <= 2) {
+      // Assuming DD/MM/YYYY
+      const d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T12:00:00Z`);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 // yyyyMMdd en UTC
@@ -579,7 +583,7 @@ async function getReport(ac, startTs, endTs, opts) {
   const ssgPrevKey2 = `SSGN_${ssgSanitized2}_${startTs - 604800000}`;
 
   // ── Cache hit ──
-  const hit = cache.get(rKey);
+  const hit = !opts.forceRefresh && cache.get(rKey);
   if (hit) {
     const result = { ...hit };
     // Siempre refrescar metaCacheTs desde disco para que sea preciso
@@ -589,7 +593,7 @@ async function getReport(ac, startTs, endTs, opts) {
     return result;
   }
 
-  const D = await loadData();
+  const D = await loadData(opts.forceRefresh);
 
   // ── Rangos de fechas (UTC) ──
   const d0 = new Date(startTs);
@@ -1011,7 +1015,7 @@ async function getReport(ac, startTs, endTs, opts) {
 
     if (fa && inS(fa)) {
       if (!asigSemData[socKey] || fa > (asigSemData[socKey].fa || ''))
-        asigSemData[socKey] = { kt, kv, soc, fa, sg: ug, ug, w: wDays, fuente, asigSem: 1 };
+        asigSemData[socKey] = { kt, kv, soc, fa, sg: ug, ug, w: wDays, fuente, asigSem: 1, estado: row[5] };
     }
 
     // FIX: solo agrega a sinGest si NO tiene gestión esta semana
@@ -1045,7 +1049,9 @@ async function getReport(ac, startTs, endTs, opts) {
       // Fallback: si este lead no estaba en D.estados, poblar asigSemData igual
       if (!asigSemData[lKey]) {
         const wDays = lr[1] ? Math.round((Date.now() - new Date(lr[1].slice(0, 4) + '-' + lr[1].slice(4, 6) + '-' + lr[1].slice(6, 8)).getTime()) / 86400000) : 0;
-        asigSemData[lKey] = { kt: lr[7] || '-', kv: lr[8] || '-', soc: lr[5] || '', fa: lr[1], sg: '', ug: '', w: wDays, fuente: lr[2] || '', asigSem: 1 };
+        asigSemData[lKey] = { kt: lr[7] || '-', kv: lr[8] || '-', soc: lr[5] || '', fa: lr[1], sg: '', ug: '', w: wDays, fuente: lr[2] || '', asigSem: 1, estado: lr[6] };
+      } else {
+        asigSemData[lKey].estado = lr[6]; // store the state!
       }
     }
     if (lr[1] && inA(lr[1])) asigPrevSoc[lKey] = 1;
@@ -1053,7 +1059,8 @@ async function getReport(ac, startTs, endTs, opts) {
 
   // Incorporar asignadas sin gestión CRM
   for (const asigKey of Object.keys(asigSemSoc)) {
-    if (!socGest[asigKey]) {
+    const estadoAsig = asigSemData[asigKey] ? asigSemData[asigKey].estado : '';
+    if (!socGest[asigKey] && estadoAsig === 'NUEVO') {
       socSinGestAsigSemSet[asigKey] = 1;
       socSinGestSet[asigKey] = 1;
       saveSsgRow(asigKey, asigSemData[asigKey]);
