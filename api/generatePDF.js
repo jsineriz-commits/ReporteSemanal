@@ -1207,7 +1207,20 @@ module.exports = async (req, res) => {
     const fileName  = `Reporte_${acSlug}_S${semana || 'X'}.pdf`;
 
     console.log(`[generatePDF] OK: ${fileName} | ${Math.round(pdfBase64.length / 1024)}KB base64 | pageH: ${Math.round(pageH)}px`);
-    res.json({ ok: true, pdfBase64, fileName });
+    // Devolver también los datos de contacto del AC para que n8n los pase a sendEmailWithPDF
+    const bodyData = req.body.data || {};
+    res.json({
+      ok: true,
+      pdfBase64,
+      fileName,
+      // Contacto del AC (para sendEmailWithPDF)
+      comercial:  ac,
+      email:      req.body.email      || bodyData.email      || '',
+      nombreMail: req.body.nombreMail || bodyData.nombreMail || ac,
+      cc:         req.body.cc         || bodyData.cc         || '',
+      folderId:   req.body.folderId   || bodyData.folderId   || '',
+      semana,
+    });
 
   } catch (err) {
     console.error('[generatePDF] Error:', err.message);
