@@ -28,7 +28,7 @@
         },
         getReport: {
           url: '/api/getReport', method: 'GET',
-          params: ['ac', 'startTs', 'endTs']
+          params: ['ac', 'startTs', 'endTs', 'forceRefresh']
         },
         refreshCacheAndWarmup: {
           url: '/api/refreshCacheAndWarmup', method: 'POST',
@@ -60,7 +60,7 @@
             var qs = cfg.params.map(function (k, i) {
               return encodeURIComponent(k) + '=' + encodeURIComponent(args[i] !== undefined ? args[i] : '');
             }).join('&');
-            url = url + (qs ? '?' + qs : '');
+            url = url + (qs ? '?' + qs : '') + (qs ? '&' : '?') + '_t=' + Date.now();
           } else if (cfg.method === 'POST') {
             var body = {};
             if (cfg.bodyKeys) {
@@ -1624,13 +1624,16 @@
         redrawCharts();
       }
 
+      var forceRefresh = window._forceFreshGet ? 1 : 0;
+      window._forceFreshGet = false;
+
       var ac = eid('selAC').value, sv = eid('selSem').value; updateNavBtns(); if (!ac || !sv) return;
       var cKey = ac + '_' + sv;
       eid('rpt').style.display = 'block'; eid('empty').style.display = 'none';
-      if (L_CACHE[cKey] && (Date.now() - L_CACHE[cKey].ts < 3600000)) { updateCacheTs(L_CACHE[cKey].data && L_CACHE[cKey].data.metaCacheTs); renderAll(L_CACHE[cKey].data, ac, sv); return; }
+      if (!forceRefresh && L_CACHE[cKey] && (Date.now() - L_CACHE[cKey].ts < 3600000)) { updateCacheTs(L_CACHE[cKey].data && L_CACHE[cKey].data.metaCacheTs); renderAll(L_CACHE[cKey].data, ac, sv); return; }
       showSkeletons();
       var p = sv.split('|');
-      google.script.run
+      var runner = google.script.run
         .withSuccessHandler(function (r) {
           if (r && r.error) {
             eid('rpt').style.display = 'none'; eid('empty').style.display = '';
@@ -1641,8 +1644,13 @@
         .withFailureHandler(function (e) {
           eid('rpt').style.display = 'none'; eid('empty').style.display = '';
           eid('empty').innerHTML = '<div class="err-box"><b>Error del servidor:</b> ' + String(e.message || e) + '</div>';
-        })
-        .getReport(ac, +p[1], +p[2]);
+        });
+
+      if (forceRefresh) {
+        runner.getReport(ac, +p[1], +p[2], 1);
+      } else {
+        runner.getReport(ac, +p[1], +p[2]);
+      }
     }
 
     function changeAcFromRanking(newAcName) {
@@ -1689,6 +1697,7 @@
 
           var ver = res.status && res.status.reportCacheVersion ? res.status.reportCacheVersion : 'n/a';
           slo(false);
+          window._forceFreshGet = true;
           if (ac && sv) autoGen();
           alert('Version actualizada. Cache limpio y recargado. Ver: ' + ver);
         })
@@ -1956,7 +1965,7 @@
       if (typeof d === 'string' && /^\d{8}$/.test(d)) return fDDash(d).replace(/-/g, '/');
       if (typeof d === 'number') d = new Date(d);
       if (!(d instanceof Date) || isNaN(d.getTime())) return '-';
-      return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0') + '/' + d.getUTCFullYear();
     }
     function fDDash(s) { if (!s || typeof s !== 'string') return '-'; return s.substr(6, 2) + '-' + s.substr(4, 2) + '-' + s.substr(0, 4); }
     function NN(v) { return v ? v.toLocaleString('es-AR') : '0'; }

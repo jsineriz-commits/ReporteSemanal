@@ -58,7 +58,17 @@ endpoints.forEach(ep => {
 
 // Fallback → index.html (SPA / Express 5 compatible)
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    if (err && !res.headersSent) res.status(404).send('Not found');
+  });
+});
+
+// Evitar que errores no capturados maten el proceso
+process.on('uncaughtException', (err) => {
+  console.error('[Local Dev] uncaughtException (proceso continúa):', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Local Dev] unhandledRejection (proceso continúa):', reason);
 });
 
 const PORT = process.env.LOCAL_PORT || 4000;

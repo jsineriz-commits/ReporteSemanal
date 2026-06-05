@@ -1,0 +1,849 @@
+{
+  "cache_invalidated_at": "2026-04-30T16:40:20.588515Z",
+  "description": "copia de la 3584 agregando columnas de repre comp y repre ven",
+  "archived": false,
+  "view_count": 77,
+  "collection_position": null,
+  "source_card_id": null,
+  "table_id": null,
+  "can_run_adhoc_query": true,
+  "result_metadata": [
+    {
+      "database_type": "Int64",
+      "semantic_type": "type/PK",
+      "lib/deduplicated-name": "ID",
+      "lib/original-name": "ID",
+      "name": "ID",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "ID",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "ID",
+        {
+          "base-type": "type/BigInteger"
+        }
+      ],
+      "effective_type": "type/BigInteger",
+      "lib/desired-column-alias": "ID",
+      "display_name": "ID",
+      "fingerprint": null,
+      "base_type": "type/BigInteger"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "UN",
+      "lib/original-name": "UN",
+      "name": "UN",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "UN",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "UN",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "UN",
+      "display_name": "UN",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 2,
+          "nil%": 0
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 3
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(Date)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "fecha_operacion",
+      "lib/original-name": "fecha_operacion",
+      "name": "fecha_operacion",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "fecha_operacion",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "fecha_operacion",
+        {
+          "base-type": "type/Date"
+        }
+      ],
+      "effective_type": "type/Date",
+      "lib/desired-column-alias": "fecha_operacion",
+      "display_name": "fecha_operacion",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 91,
+          "nil%": 0
+        },
+        "type": {
+          "type/DateTime": {
+            "earliest": "2026-01-12",
+            "latest": "2026-05-12"
+          }
+        }
+      },
+      "base_type": "type/Date"
+    },
+    {
+      "database_type": "Nullable(Int32)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "mes_operacion",
+      "lib/original-name": "mes_operacion",
+      "name": "mes_operacion",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "mes_operacion",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "mes_operacion",
+        {
+          "base-type": "type/Integer"
+        }
+      ],
+      "effective_type": "type/Integer",
+      "lib/desired-column-alias": "mes_operacion",
+      "display_name": "mes_operacion",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 5,
+          "nil%": 0
+        },
+        "type": {
+          "type/Number": {
+            "min": 1,
+            "q1": 2.0665244798944333,
+            "q3": 3.7967504284290343,
+            "max": 5,
+            "sd": 1.072190536366152,
+            "avg": 2.9135
+          }
+        }
+      },
+      "base_type": "type/Integer"
+    },
+    {
+      "database_type": "Nullable(Int32)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "anio_operacion",
+      "lib/original-name": "anio_operacion",
+      "name": "anio_operacion",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "anio_operacion",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "anio_operacion",
+        {
+          "base-type": "type/Integer"
+        }
+      ],
+      "effective_type": "type/Integer",
+      "lib/desired-column-alias": "anio_operacion",
+      "display_name": "anio_operacion",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 1,
+          "nil%": 0
+        },
+        "type": {
+          "type/Number": {
+            "min": 2026,
+            "q1": 2026,
+            "q3": 2026,
+            "max": 2026,
+            "sd": 0,
+            "avg": 2026
+          }
+        }
+      },
+      "base_type": "type/Integer"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "RS_Vendedora",
+      "lib/original-name": "RS_Vendedora",
+      "name": "RS_Vendedora",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "RS_Vendedora",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "RS_Vendedora",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "RS_Vendedora",
+      "display_name": "RS_Vendedora",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 681,
+          "nil%": 0
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 21.23
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "asoc_com_vend",
+      "lib/original-name": "asoc_com_vend",
+      "name": "asoc_com_vend",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "asoc_com_vend",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "asoc_com_vend",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "asoc_com_vend",
+      "display_name": "asoc_com_vend",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 31,
+          "nil%": 0.633
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 5.623
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "RS_Compradora",
+      "lib/original-name": "RS_Compradora",
+      "name": "RS_Compradora",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "RS_Compradora",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "RS_Compradora",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "RS_Compradora",
+      "display_name": "RS_Compradora",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 66,
+          "nil%": 0.143
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 22.9535
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "asoc_com_compra",
+      "lib/original-name": "asoc_com_compra",
+      "name": "asoc_com_compra",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "asoc_com_compra",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "asoc_com_compra",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "asoc_com_compra",
+      "display_name": "asoc_com_compra",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 8,
+          "nil%": 0.9585
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 0.668
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(Float64)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "Q",
+      "lib/original-name": "Q",
+      "name": "Q",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "Q",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "Q",
+        {
+          "base-type": "type/Float"
+        }
+      ],
+      "effective_type": "type/Float",
+      "lib/desired-column-alias": "Q",
+      "display_name": "Q",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 92,
+          "nil%": 0
+        },
+        "type": {
+          "type/Number": {
+            "min": 0,
+            "q1": 22.5429755958811,
+            "q3": 48.943855637600265,
+            "max": 650,
+            "sd": 27.576165384786908,
+            "avg": 35.8895
+          }
+        }
+      },
+      "base_type": "type/Float"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "Estado",
+      "lib/original-name": "Estado",
+      "name": "Estado",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "Estado",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "Estado",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "Estado",
+      "display_name": "Estado",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 12,
+          "nil%": 0
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 13.229
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "Operador",
+      "lib/original-name": "Operador",
+      "name": "Operador",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "Operador",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "Operador",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "Operador",
+      "display_name": "Operador",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 11,
+          "nil%": 0.012
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0.1215,
+            "average-length": 2.595
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "String",
+      "semantic_type": null,
+      "lib/deduplicated-name": "Frigorif_Establ_Comprador",
+      "lib/original-name": "Frigorif_Establ_Comprador",
+      "name": "Frigorif_Establ_Comprador",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "Frigorif_Establ_Comprador",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "Frigorif_Establ_Comprador",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "Frigorif_Establ_Comprador",
+      "display_name": "Frigorif_Establ_Comprador",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 54,
+          "nil%": 0
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 21.236
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(Date)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "fecha_carga",
+      "lib/original-name": "fecha_carga",
+      "name": "fecha_carga",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "fecha_carga",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "fecha_carga",
+        {
+          "base-type": "type/Date"
+        }
+      ],
+      "effective_type": "type/Date",
+      "lib/desired-column-alias": "fecha_carga",
+      "display_name": "fecha_carga",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 102,
+          "nil%": 0.145
+        },
+        "type": {
+          "type/DateTime": {
+            "earliest": "2026-01-13",
+            "latest": "2026-05-11"
+          }
+        }
+      },
+      "base_type": "type/Date"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "Fecha_Faena",
+      "lib/original-name": "Fecha_Faena",
+      "name": "Fecha_Faena",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "Fecha_Faena",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "Fecha_Faena",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "Fecha_Faena",
+      "display_name": "Fecha_Faena",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 90,
+          "nil%": 0
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 8.695
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(Int64)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "cuit_vend",
+      "lib/original-name": "cuit_vend",
+      "name": "cuit_vend",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "cuit_vend",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "cuit_vend",
+        {
+          "base-type": "type/BigInteger"
+        }
+      ],
+      "effective_type": "type/BigInteger",
+      "lib/desired-column-alias": "cuit_vend",
+      "display_name": "cuit_vend",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 677,
+          "nil%": 0.0005
+        },
+        "type": {
+          "type/Number": {
+            "min": 20042684067,
+            "q1": 20291430475.209644,
+            "q3": 30708258062.299946,
+            "max": 33718183729,
+            "sd": 4903331059.719267,
+            "avg": 27430703470.616306
+          }
+        }
+      },
+      "base_type": "type/BigInteger"
+    },
+    {
+      "database_type": "Nullable(Int64)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "cuit_comp",
+      "lib/original-name": "cuit_comp",
+      "name": "cuit_comp",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "cuit_comp",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "cuit_comp",
+        {
+          "base-type": "type/BigInteger"
+        }
+      ],
+      "effective_type": "type/BigInteger",
+      "lib/desired-column-alias": "cuit_comp",
+      "display_name": "cuit_comp",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 64,
+          "nil%": 0.143
+        },
+        "type": {
+          "type/Number": {
+            "min": 12345678908,
+            "q1": 30543539693.339077,
+            "q3": 30707250654.82277,
+            "max": 33717391379,
+            "sd": 1401155785.4585068,
+            "avg": 30707329000.44399
+          }
+        }
+      },
+      "base_type": "type/BigInteger"
+    },
+    {
+      "database_type": "Nullable(String)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "op_carga",
+      "lib/original-name": "op_carga",
+      "name": "op_carga",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "op_carga",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "op_carga",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "op_carga",
+      "display_name": "op_carga",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 29,
+          "nil%": 0.9175
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 1.2335
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "Nullable(Float64)",
+      "semantic_type": null,
+      "lib/deduplicated-name": "rend",
+      "lib/original-name": "rend",
+      "name": "rend",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "rend",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "rend",
+        {
+          "base-type": "type/Float"
+        }
+      ],
+      "effective_type": "type/Float",
+      "lib/desired-column-alias": "rend",
+      "display_name": "rend",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 766,
+          "nil%": 0
+        },
+        "type": {
+          "type/Number": {
+            "min": -770.4630000000001,
+            "q1": 0.010860442637857176,
+            "q3": 0.032206899298260094,
+            "max": 9.9926,
+            "sd": 39.26855663526807,
+            "avg": -2.8028280703628927
+          }
+        }
+      },
+      "base_type": "type/Float"
+    },
+    {
+      "database_type": "String",
+      "semantic_type": null,
+      "lib/deduplicated-name": "repre_vendedor",
+      "lib/original-name": "repre_vendedor",
+      "name": "repre_vendedor",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "repre_vendedor",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "repre_vendedor",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "repre_vendedor",
+      "display_name": "repre_vendedor",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 63,
+          "nil%": 0
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 12.9375
+          }
+        }
+      },
+      "base_type": "type/Text"
+    },
+    {
+      "database_type": "String",
+      "semantic_type": null,
+      "lib/deduplicated-name": "repre_comprador",
+      "lib/original-name": "repre_comprador",
+      "name": "repre_comprador",
+      "lib/source": "source/native",
+      "lib/source-column-alias": "repre_comprador",
+      "source": "native",
+      "field_ref": [
+        "field",
+        "repre_comprador",
+        {
+          "base-type": "type/Text"
+        }
+      ],
+      "effective_type": "type/Text",
+      "lib/desired-column-alias": "repre_comprador",
+      "display_name": "repre_comprador",
+      "fingerprint": {
+        "global": {
+          "distinct-count": 9,
+          "nil%": 0
+        },
+        "type": {
+          "type/Text": {
+            "percent-json": 0,
+            "percent-url": 0,
+            "percent-email": 0,
+            "percent-state": 0,
+            "average-length": 1.1125
+          }
+        }
+      },
+      "base_type": "type/Text"
+    }
+  ],
+  "embedding_type": null,
+  "dependency_analysis_version": 0,
+  "creator": {
+    "email": "jsineriz@decampoacampo.com",
+    "first_name": "Juan",
+    "is_data_analyst": false,
+    "last_login": "2026-05-05T08:05:21Z",
+    "is_qbnewb": false,
+    "is_superuser": true,
+    "id": 13371347,
+    "last_name": "Siñeriz",
+    "tenant_id": null,
+    "date_joined": "2026-03-09T16:04:11Z",
+    "common_name": "Juan Siñeriz"
+  },
+  "initially_published_at": null,
+  "can_write": true,
+  "card_schema": 23,
+  "database_id": 2,
+  "enable_embedding": false,
+  "collection_id": 18,
+  "query_type": "native",
+  "name": "operaciones para reporte sem",
+  "last_query_start": "2026-05-04T17:40:39.491802Z",
+  "is_remote_synced": false,
+  "dashboard_count": 0,
+  "document_id": null,
+  "last_used_at": "2026-05-04T17:40:39.506445Z",
+  "dashboard": null,
+  "type": "question",
+  "average_query_time": 20245.5485,
+  "creator_id": 13371347,
+  "can_restore": false,
+  "moderation_reviews": [],
+  "updated_at": "2026-05-05T11:34:29.6772Z",
+  "made_public_by_id": 13371347,
+  "embedding_params": null,
+  "cache_ttl": null,
+  "dataset_query": {
+    "lib/type": "mbql/query",
+    "database": 2,
+    "stages": [
+      {
+        "lib/type": "mbql.stage/native",
+        "native": "WITH \n-- =================================================================\n-- 1. CTES GLOBALES COMPARTIDOS Y REPRESENTANTES\n-- =================================================================\naso_comercial AS (\n    SELECT st.id AS ID, st.razon_social AS razon_social, concat(u.nombre, ' ', u.apellido) AS asoc_com\n    FROM dcac.sociedades_tags AS st\n    LEFT JOIN dcac.usuarios AS u ON st.asociado_comercial = u.usuario \n),\nrepre_vinc AS (\n    SELECT ST.id AS id, ST.razon_social AS razon_social, arrayStringConcat(groupUniqArray(concat(R.nombre, ' ', R.apellido)), ', ') AS representante\n    FROM dcac.rel_usuarios_sociedades AS RUS\n    INNER JOIN dcac.clientes_x_representantes AS CXR ON CXR.cliente = RUS.usuario \n    INNER JOIN dcac.representantes AS R ON R.usuario = CXR.representante\n    INNER JOIN dcac.sociedades_tags AS ST ON ST.id = RUS.sociedad\n    WHERE RUS.usuario != 0 AND RUS.estado = 0 AND ST.estado = 0\n    GROUP BY ST.id, ST.razon_social\n),\nRepreCompraInvernada AS (\n    SELECT lxi.revisacion, arrayStringConcat(groupUniqArray(concat(u.nombre, ' ', u.apellido)), ', ') AS RepresentanteCompra\n    FROM dcac.lotes_x_interesados AS lxi LEFT JOIN dcac.usuarios AS u ON u.usuario = lxi.representante_de_compra GROUP BY lxi.revisacion\n),\nRepreVentaInv AS (\n    SELECT r.revisacion AS id, arrayStringConcat(groupUniqArray(concat(u.nombre, ' ', u.apellido)), ', ') AS RepresentanteVenta\n    FROM dcac.revisaciones AS r LEFT JOIN dcac.usuarios AS u ON u.usuario = r.representante GROUP BY r.revisacion\n),\n\n-- =================================================================\n-- 2. BLOQUES DE DEDUPLICACIÓN PREVIA (EL SECRETO PARA NO QUEDARSE SIN RAM)\n-- =================================================================\n-- Al forzar 1 fila por ID antes de cruzar, evitamos la Explosión Cartesiana\nliq_uniq AS (SELECT * FROM negocios.liquidaciones ORDER BY toFloat64OrZero(toString(kg_salida_neto)) DESC LIMIT 1 BY negocio),\ndc_uniq AS (SELECT * FROM dcac.detalles_carga ORDER BY toFloat64OrZero(toString(peso_neto)) DESC LIMIT 1 BY revisacion),\nlxi_uniq AS (SELECT * FROM dcac.lotes_x_interesados LIMIT 1 BY revisacion),\nar_neg_uniq AS (SELECT * FROM dcac.analisis_resultados LIMIT 1 BY negocio),\nar_rev_uniq AS (SELECT * FROM dcac.analisis_resultados LIMIT 1 BY revisacion),\narp_neg_uniq AS (SELECT * FROM dcac.analisis_resultados_proyectado LIMIT 1 BY negocio),\narp_rev_uniq AS (SELECT * FROM dcac.analisis_resultados_proyectado LIMIT 1 BY revisacion),\nib_neg_uniq AS (SELECT * FROM dcac.informes_baja LIMIT 1 BY negocio),\nib_rev_uniq AS (SELECT * FROM dcac.informes_baja LIMIT 1 BY revisacion),\ncotiz_uniq AS (SELECT * FROM negocios.cd_cotizaciones LIMIT 1 BY lote_nro),\nir_uniq AS (SELECT * FROM dcac.informes_revisaciones LIMIT 1 BY revisacion),\n\n-- =================================================================\n-- 3. ESTADOS Y CONCRECIONES\n-- =================================================================\nc5_datitos AS (\n    SELECT r.revisacion AS lote_id, sv.id AS id_soc, toDateOrNull(if(toString(r.fecha_publicacion) IN ('', '0000-00-00'), NULL, toString(r.fecha_publicacion))) AS fecha, 'Invernada' AS Tipo,\n        CASE WHEN toString(r.estado) = '4' AND toString(r.no_concretado) = '0' THEN 'Concretadas'\n             WHEN toString(r.estado) = '5' THEN 'Dadas de baja'\n             WHEN toString(r.estado) = '7' THEN 'No Concretadas' END AS Estado\n    FROM dcac.revisaciones AS r INNER JOIN dcac.sociedades_tags AS sv ON r.sociedad_vendedora = sv.id\n    WHERE toString(sv.razon_social) != ''\n    UNION ALL \n    SELECT n.id AS lote_id, sv.id AS id_soc, toDateOrNull(if(toString(n.fecha_publicacion) IN ('', '0000-00-00'), NULL, toString(n.fecha_publicacion))) AS fecha, 'Faena' AS Tipo,\n        CASE WHEN toInt32OrZero(toString(n.tipo)) IN (3,4,5,7,8,9) AND toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' THEN 'Concretadas'\n             WHEN toString(n.borrado) = '1' THEN 'Dadas de baja'\n             WHEN toString(n.no_concretado) = '1' THEN 'No Concretadas' END AS Estado\n    FROM dcac.negocios AS n INNER JOIN dcac.sociedades_tags AS sv ON n.sociedad_vendedora = sv.id\n    WHERE toString(sv.razon_social) != ''\n),\nc5_ranked AS (\n    SELECT *, row_number() OVER (PARTITION BY id_soc, Tipo ORDER BY fecha DESC) AS rn_tipo, row_number() OVER (PARTITION BY id_soc ORDER BY fecha DESC) AS rn_total\n    FROM c5_datitos WHERE Estado IN ('Concretadas', 'No Concretadas')\n),\nconcrecion_ult_5 AS (\n    SELECT t_tipo.id_soc, coalesce(t_tipo.Conc_Fae / nullIf(t_tipo.Conc_Fae + t_tipo.NoConc_Fae, 0), 0) AS porc_conc_5_Fae, coalesce(t_tipo.Conc_Inv / nullIf(t_tipo.Conc_Inv + t_tipo.NoConc_Inv, 0), 0) AS porc_conc_5_Inv, coalesce(t_tot.Conc_Tot / nullIf(t_tot.Conc_Tot + t_tot.NoConc_Tot, 0), 0) AS porc_conc_5_tot\n    FROM (SELECT id_soc, sum(Estado = 'Concretadas' AND Tipo = 'Faena') AS Conc_Fae, sum(Estado = 'No Concretadas' AND Tipo = 'Faena') AS NoConc_Fae, sum(Estado = 'Concretadas' AND Tipo = 'Invernada') AS Conc_Inv, sum(Estado = 'No Concretadas' AND Tipo = 'Invernada') AS NoConc_Inv FROM c5_ranked WHERE rn_tipo <= 5 GROUP BY id_soc) AS t_tipo\n    INNER JOIN (SELECT id_soc, sum(Estado = 'Concretadas') AS Conc_Tot, sum(Estado = 'No Concretadas') AS NoConc_Tot FROM c5_ranked WHERE rn_total <= 5 GROUP BY id_soc) AS t_tot ON t_tipo.id_soc = t_tot.id_soc\n),\ncg_datitos AS (\n    SELECT r.revisacion AS lote_id, sv.id AS id_soc, 'Invernada' AS Tipo, CASE WHEN toString(r.estado) = '4' AND toString(r.no_concretado) = '0' THEN 'Concretadas' WHEN toString(r.estado) = '5' THEN 'Dadas de baja' WHEN toString(r.estado) = '7' THEN 'No Concretadas' WHEN toString(r.estado) IN ('1','3','4','11','12') THEN 'Publicadas' END AS Estado\n    FROM dcac.revisaciones AS r INNER JOIN dcac.sociedades_tags AS sv ON r.sociedad_vendedora = sv.id WHERE toString(sv.razon_social) != ''\n    UNION ALL \n    SELECT n.id AS lote_id, sv.id AS id_soc, 'Faena' AS Tipo, CASE WHEN toInt32OrZero(toString(n.tipo)) IN (3,4,5,7,8,9,13) AND toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' THEN 'Concretadas' WHEN toString(n.borrado) = '1' THEN 'Dadas de baja' WHEN toString(n.no_concretado) = '1' THEN 'No Concretadas' WHEN toInt32OrZero(toString(n.tipo)) IN (0,10,11,12) AND toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' THEN 'Publicadas' END AS Estado\n    FROM dcac.negocios AS n INNER JOIN dcac.sociedades_tags AS sv ON n.sociedad_vendedora = sv.id WHERE toString(sv.razon_social) != ''\n),\nconcrecion_gral AS (\n    SELECT id_soc, sum(Estado = 'Concretadas' AND Tipo = 'Faena') / nullIf(sum(Estado = 'Concretadas' AND Tipo = 'Faena') + sum(Estado = 'No Concretadas' AND Tipo = 'Faena'), 0) AS conc_gral_fae, sum(Estado = 'Concretadas' AND Tipo = 'Invernada') / nullIf(sum(Estado = 'Concretadas' AND Tipo = 'Invernada') + sum(Estado = 'No Concretadas' AND Tipo = 'Invernada'), 0) AS conc_gral_inv, sum(Estado = 'Concretadas') / nullIf(sum(Estado = 'Concretadas') + sum(Estado = 'No Concretadas'), 0) AS conc_gral, sum(Estado = 'Concretadas') + sum(Estado = 'No Concretadas') + sum(Estado = 'Publicadas') AS Ofrecimientos\n    FROM cg_datitos WHERE Estado IS NOT NULL GROUP BY id_soc\n),\nFechaFaenaReal AS (\n    SELECT lo_negocio, max(toDateOrNull(if(toString(lo_fecha_faena_real) IN ('','0000-00-00'), NULL, toString(lo_fecha_faena_real)))) AS lo_fecha_faena_real\n    FROM negocios.liquidacion_oficial WHERE lo_tipo_liquid = 'interna' GROUP BY lo_negocio\n),\nEstados_FAE AS (\n    SELECT n.id AS ID_Negocio,\n        CASE \n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='0' AND toString(n.estado)='0' THEN 'OFRECIMIENTOS'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toInt32OrZero(toString(n.tipo)) IN (0,10,11,12) AND toString(n.estado) = '1' THEN 'PUBLICADAS'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='3' AND toString(n.estado) = '1' THEN 'Vendidas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='9' AND toString(n.estado) = '1' THEN 'A Cargar'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='7' AND toString(n.estado) = '1' THEN 'Cargadas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='13' AND toString(n.estado) = '1' THEN 'Faenadas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='4' AND toString(n.estado) = '1' THEN 'A Liquidar'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='5' AND toString(n.estado) = '1' THEN 'Liquidadas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo) = '8' AND toString(n.estado) = '1' AND (addDays(toDateOrNull(toString(lo.lo_fecha_faena_real)), toInt32OrZero(toString(l.plazo2)) + toInt32OrZero(toString(l.plazo_promedio))) >= today()) AND (toString(lo.lo_fecha_faena_real) NOT IN ('','0000-00-00')) AND (toString(lo.lo_fecha_pago_real) IN ('','0000-00-00') OR lo.lo_fecha_pago_real IS NULL) THEN 'Cerrados'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.estado) = '1' AND toString(n.tipo) = '8' AND (addDays(toDateOrNull(toString(lo.lo_fecha_faena_real)), toInt32OrZero(toString(l.plazo2)) + toInt32OrZero(toString(l.plazo_promedio))) < today()) AND (toString(lo.lo_fecha_faena_real) NOT IN ('','0000-00-00')) AND (toString(lo.lo_fecha_pago_real) IN ('','0000-00-00') OR lo.lo_fecha_pago_real IS NULL) AND toInt32OrZero(toString(l.negocio)) > 7300 THEN 'Pagos Vencidos'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo) = '8' AND toString(n.estado) = '1' AND toString(lo.lo_fecha_pago_real) NOT IN ('','0000-00-00') THEN 'Negocios Terminados'\n            ELSE '0'\n        END AS ESTADO\n    FROM dcac.negocios AS n\n    LEFT JOIN liq_uniq AS l ON n.id = l.negocio\n    LEFT JOIN negocios.liquidacion_oficial AS lo ON n.id = lo.lo_negocio\n    WHERE toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND lo.lo_tipo_liquid = 'interna'\n    GROUP BY n.id, ESTADO\n),\ncte_estados_inv AS (\n    SELECT RS.revisacion AS ID_Revisacion, \n        CASE\n            WHEN toString(RS.estado) = '0' THEN 'OFRECIMIENTOS'\n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '6' AND toString(DTC.fecha_carga_final) NOT IN ('','0000-00-00') AND toString(RS.no_concretado) = '0' AND ( (toString(AR.fecha_pago_real_1) IN ('','0000-00-00') AND today() > addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c1)))) OR (toString(AR.fecha_pago_real_1) NOT IN ('','0000-00-00') AND toInt32OrZero(toString(DTC.plazo_c2)) > 0 AND toString(AR.fecha_pago_real_2) IN ('','0000-00-00') AND today() > addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c2)))) OR (toString(AR.fecha_pago_real_2) NOT IN ('','0000-00-00') AND toInt32OrZero(toString(DTC.plazo_c3)) > 0 AND toString(AR.fecha_pago_real_3) IN ('','0000-00-00') AND today() > addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c3)))) OR (toString(AR.fecha_pago_real_3) NOT IN ('','0000-00-00') AND toInt32OrZero(toString(DTC.plazo_c4)) > 0 AND toString(AR.fecha_pago_real_4) IN ('','0000-00-00') AND today() > addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c4)))) ) THEN 'Pagos Vencidos'\n            WHEN toString(RS.estado) IN ('3','6','11','12') AND toString(RS.estado_b) = '0' AND toString(RS.no_concretado) = '0' THEN 'Publicadas'   \n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '0' AND toString(RS.no_concretado) = '0' THEN 'Vendidas'\n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '2' AND toString(RS.no_concretado) = '0' THEN 'A Cargar'\n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '3' AND toString(RS.no_concretado) = '0' THEN 'Cargadas'\n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '4' AND toString(RS.no_concretado) = '0' THEN 'A Liquidar'\n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '5' AND toString(RS.no_concretado) = '0' THEN 'Liquidadas'\n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '6' AND toString(RS.no_concretado) = '0' AND ( (toString(AR.fecha_pago_real_1) IN ('','0000-00-00') AND today() <= addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c1)))) OR (toString(AR.fecha_pago_real_1) NOT IN ('','0000-00-00') AND toInt32OrZero(toString(DTC.plazo_c2)) > 0 AND toString(AR.fecha_pago_real_2) IN ('','0000-00-00') AND today() <= addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c2)))) OR (toString(AR.fecha_pago_real_2) NOT IN ('','0000-00-00') AND toInt32OrZero(toString(DTC.plazo_c3)) > 0 AND toString(AR.fecha_pago_real_3) IN ('','0000-00-00') AND today() <= addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c3)))) OR (toString(AR.fecha_pago_real_3) NOT IN ('','0000-00-00') AND toInt32OrZero(toString(DTC.plazo_c4)) > 0 AND toString(AR.fecha_pago_real_4) IN ('','0000-00-00') AND today() <= addDays(toDateOrNull(toString(DTC.fecha_carga_final)), toInt32OrZero(toString(DTC.plazo_c4)))) ) THEN 'Cerradas'\n            WHEN toString(RS.estado) = '4' AND toString(RS.estado_b) = '6' AND toString(RS.no_concretado) = '0' AND ( (((toInt32OrZero(toString(DTC.plazo_c1)) != 0 AND toInt32OrZero(toString(DTC.plazo_c2)) != 0 AND toInt32OrZero(toString(DTC.plazo_c3)) != 0 AND toInt32OrZero(toString(DTC.plazo_c4)) != 0) OR (toInt32OrZero(toString(DTC.plazo_c1)) = 0 AND toInt32OrZero(toString(DTC.plazo_c2)) != 0 AND toInt32OrZero(toString(DTC.plazo_c3)) != 0 AND toInt32OrZero(toString(DTC.plazo_c4)) != 0  AND toInt32OrZero(toString(DTC.plazo_c1_p)) > 0) AND toString(AR.fecha_pago_real_1) NOT IN ('','0000-00-00') AND toString(AR.fecha_pago_real_2) NOT IN ('','0000-00-00') AND toString(AR.fecha_pago_real_3) NOT IN ('','0000-00-00') AND toString(AR.fecha_pago_real_4) NOT IN ('','0000-00-00'))) OR ((toInt32OrZero(toString(DTC.plazo_c1)) != 0 AND toInt32OrZero(toString(DTC.plazo_c2)) != 0 AND toInt32OrZero(toString(DTC.plazo_c3)) != 0) OR (toInt32OrZero(toString(DTC.plazo_c1)) = 0 AND toInt32OrZero(toString(DTC.plazo_c2)) != 0 AND toInt32OrZero(toString(DTC.plazo_c3)) != 0 AND toInt32OrZero(toString(DTC.plazo_c1_p)) > 0) AND toString(AR.fecha_pago_real_1) NOT IN ('','0000-00-00') AND toString(AR.fecha_pago_real_2) NOT IN ('','0000-00-00') AND toString(AR.fecha_pago_real_3) NOT IN ('','0000-00-00')) OR ((toInt32OrZero(toString(DTC.plazo_c1)) != 0 AND toInt32OrZero(toString(DTC.plazo_c2)) != 0) OR (toInt32OrZero(toString(DTC.plazo_c1)) = 0 AND toInt32OrZero(toString(DTC.plazo_c2)) != 0 AND toInt32OrZero(toString(DTC.plazo_c1_p)) > 0) AND toString(AR.fecha_pago_real_1) NOT IN ('','0000-00-00') AND toString(AR.fecha_pago_real_2) NOT IN ('','0000-00-00')) OR ((toInt32OrZero(toString(DTC.plazo_c1)) = 0 AND toInt32OrZero(toString(DTC.plazo_c1_p)) > 0) AND toString(AR.fecha_pago_real_1) NOT IN ('','0000-00-00')) OR ((toInt32OrZero(toString(DTC.plazo_c1)) != 0) AND toString(AR.fecha_pago_real_1) NOT IN ('','0000-00-00')) ) THEN 'Negocios Terminados'\n        END AS ESTADOS_Invernada \n    FROM dcac.revisaciones AS RS\n    LEFT JOIN dc_uniq AS DTC ON RS.revisacion = DTC.revisacion\n    LEFT JOIN ar_rev_uniq AS AR ON RS.revisacion = AR.revisacion\n    WHERE toString(RS.estado) IN ('0','2','3','4','6','11','12') AND toInt64OrZero(toString(RS.revisacion)) > 1500\n    GROUP BY ID_Revisacion, ESTADOS_Invernada\n),\nEstados_MAG AS (\n    SELECT n.id AS ID_Negocio,\n        CASE \n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='3' AND toString(n.mag) = '1' THEN 'Vendidas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='9' AND toString(n.mag) = '1' THEN 'A Cargar'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='7' AND toString(n.mag) = '1' AND toFloat64OrZero(toString(l.kg_carne)) = 0 THEN 'Cargadas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='13' AND toString(n.mag) = '1' THEN 'Faenadas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='4' AND toString(n.mag) = '1' THEN 'A Liquidar'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='5' AND toString(n.mag) = '1' THEN 'Liquidadas'\n            WHEN toString(n.borrado) != '1' AND toString(n.no_concretado) != '1' AND toString(n.tipo)='8' AND toString(n.mag) = '1' THEN 'Cerrados'\n            ELSE '0'\n        END AS ESTADO\n    FROM negocios.liquidacion_oficial AS lo\n    LEFT JOIN liq_uniq AS l ON lo.lo_negocio = l.negocio\n    LEFT JOIN dcac.negocios AS n ON n.id = lo.lo_negocio\n    WHERE toFloat64OrZero(toString(lo.lo_total_cabezas)) != 0 AND toString(n.estado) = '1' AND toString(n.motivo_baja_id) = '0' AND toString(n.no_concretado) = '0' AND toString(n.fecha_vendida) != '0' AND toString(n.mag) = '1' AND toInt64OrZero(toString(n.id)) > 0\n    GROUP BY ID_Negocio, ESTADO\n),\n\n-- =================================================================\n-- 4. PRE-FILTROS DE TABLAS GRANDES (PARA NO QUEMAR MEMORIA RAM)\n-- =================================================================\nfaena_base AS (\n    SELECT * FROM dcac.negocios WHERE toDateOrNull(toString(fecha)) >= '2024-01-01' AND toInt64OrZero(toString(id)) > 0\n),\ninvernada_base AS (\n    SELECT * FROM dcac.revisaciones WHERE toDateOrNull(toString(fecha_hora)) >= '2024-01-01' AND toInt64OrZero(toString(revisacion)) > 0\n),\n\n-- =================================================================\n-- 5. FAENA FINAL\n-- =================================================================\nfaena_final AS (\n    SELECT \n        toInt64OrZero(toString(n.id)) AS ID,\n        toString(CASE WHEN toString(n.mag) = '1' THEN 'MAG' ELSE 'FAE' END) AS UN,\n        CASE WHEN toString(n.mag) = '1' THEN toDateOrNull(toString(n.fecha_vendida)) WHEN ffr.lo_fecha_faena_real IS NULL THEN toDateOrNull(toString(nl.fecha_faena)) ELSE ffr.lo_fecha_faena_real END AS fecha_operacion,\n        toInt32OrZero(toString(toMonth(CASE WHEN toString(n.mag) = '1' THEN toDateOrNull(toString(n.fecha_vendida)) WHEN ffr.lo_fecha_faena_real IS NULL THEN toDateOrNull(toString(nl.fecha_faena)) ELSE ffr.lo_fecha_faena_real END))) AS mes_operacion,\n        toInt32OrZero(toString(toYear(CASE WHEN toString(n.mag) = '1' THEN toDateOrNull(toString(n.fecha_vendida)) WHEN ffr.lo_fecha_faena_real IS NULL THEN toDateOrNull(toString(nl.fecha_faena)) ELSE ffr.lo_fecha_faena_real END))) AS anio_operacion,\n        toString(stvend.razon_social) AS RS_Vendedora,\n        toString(if(concat(uacvend.nombre, ' ', uacvend.apellido) = '' OR uacvend.nombre IS NULL, ac_vend.asoc_com, concat(uacvend.nombre, ' ', uacvend.apellido))) AS asoc_com_vend,\n        toString(stcomp.razon_social) AS RS_Compradora, \n        toString(if(concat(uaccomp.nombre, ' ', uaccomp.apellido) = '' OR uaccomp.nombre IS NULL, ac_comp.asoc_com, concat(uaccomp.nombre, ' ', uaccomp.apellido))) AS asoc_com_compra,\n        toFloat64OrZero(toString(CASE WHEN toFloat64OrZero(toString(nl.cantidad_liquidada)) = 0 THEN toString(n.cantidad) ELSE toString(nl.cantidad_liquidada) END)) AS Q,\n        \n        toString(CASE WHEN ef.ESTADO IS NULL THEN em.ESTADO WHEN ef.ESTADO IS NULL AND em.ESTADO IS NULL THEN '' ELSE ef.ESTADO END) AS Estado,\n        toString(CASE WHEN concat(uop.nombre, ' ', uop.apellido) = 'Tomas Ignacio Lasarte' THEN 'TL' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Segundo Guevara' THEN 'SG' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Pedro De Hagen' THEN 'PD' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Maximiliano Oliveri' THEN 'MO' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Benjamin Guiraldes' THEN 'BG' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Jorge Torriglia' THEN 'JT' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Celestino Rodriguez' THEN 'CR' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Alberto Pedro Bernaudo' THEN 'AB' WHEN concat(uop.nombre, ' ', uop.apellido) LIKE 'Ignacio Diez Pe_a' THEN 'IDP' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Gonzalo Haedo' THEN 'GH' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Andres Moronell' THEN 'AM' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Segundo Balestra' THEN 'SB' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Maximiliano Salgado' THEN 'MS' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Kevin Ceravolo' THEN 'KC' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Santiago Busquet' THEN 'SB' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Juan Manuel Rial' THEN 'JMR' ELSE concat(uop.nombre, ' ', uop.apellido) END) AS Operador,\n        \n        toString(fri.nombre_frigorifico) AS Frigorif_Establ_Comprador,\n        toDateOrNull(toString(nl.fecha_carga)) AS fecha_carga,\n        toString(if(toDateOrNull(toString(nl.fecha_faena)) IS NULL, '', concat(leftPad(toString(toDayOfMonth(toDateOrNull(toString(nl.fecha_faena)))), 2, '0'), '/', leftPad(toString(toMonth(toDateOrNull(toString(nl.fecha_faena)))), 2, '0'), '/', toString(toYear(toDateOrNull(toString(nl.fecha_faena))))))) AS Fecha_Faena,\n        toInt64OrNull(toString(stvend.cuit)) AS cuit_vend,\n        toInt64OrNull(toString(stcomp.cuit)) AS cuit_comp,\n        toString(concat(ucarga.nombre, ' ', ucarga.apellido)) AS op_carga,\n        toFloat64OrZero(toString(CASE\n            WHEN upper(trim(ef.ESTADO)) IN ('TROPAS A CARGAR', 'TROPAS CARGADAS', 'A CARGAR', 'CARGADAS') AND toFloat64OrZero(toString(arp.rendimiento_proyectado)) != 0 THEN toFloat64OrZero(toString(arp.rendimiento_proyectado))/100\n            WHEN upper(trim(ef.ESTADO)) IN ('FAENADAS', 'LIQUIDADAS', 'A LIQUIDAR', 'CERRADOS', 'PAGOS VENCIDOS') AND toFloat64OrZero(toString(ar.rendimiento_final)) != 0 THEN toFloat64OrZero(toString(ar.rendimiento_final))/100\n            WHEN toFloat64OrZero(toString(ar.rendimiento_real_total)) != 0 THEN toFloat64OrZero(toString(ar.rendimiento_real_total))/100\n            WHEN toFloat64OrZero(toString(ar.rendimiento_final)) != 0 THEN toFloat64OrZero(toString(ar.rendimiento_final))/100\n            WHEN toFloat64OrZero(toString(arp.rendimiento_proyectado)) != 0 THEN toFloat64OrZero(toString(arp.rendimiento_proyectado))/100\n            WHEN toFloat64OrZero(toString(arp.rendimiento_final)) != 0 THEN toFloat64OrZero(toString(arp.rendimiento_final))/100\n            ELSE 0\n        END)) AS rend,\n        toString(coalesce(nullIf(concat(rv.nombre, ' ', rv.apellido), ''), rv_vend.representante)) AS repre_vendedor,\n        toString(rv_comp.representante) AS repre_comprador\n\n    FROM faena_base AS n\n    LEFT JOIN liq_uniq AS nl ON n.id = nl.negocio\n    LEFT JOIN dcac.sociedades_tags AS stvend ON n.sociedad_vendedora = stvend.id\n    LEFT JOIN dcac.sociedades_tags AS stcomp ON nl.sociedad_compradora = stcomp.id\n    LEFT JOIN ar_neg_uniq AS ar ON n.id = ar.negocio\n    LEFT JOIN arp_neg_uniq AS arp ON n.id = arp.negocio\n    LEFT JOIN dcac.usuarios AS acsv ON stvend.asociado_comercial = acsv.usuario\n    LEFT JOIN dcac.usuarios AS uacvend ON n.asociado_comercial = uacvend.usuario\n    LEFT JOIN dcac.usuarios AS rv ON n.creado_rep = rv.usuario\n    LEFT JOIN negocios.liquidacion_oficial AS lo ON n.id = lo.lo_negocio\n    LEFT JOIN dcac.usuarios AS acsc ON stcomp.asociado_comercial = acsc.usuario\n    LEFT JOIN dcac.usuarios AS uaccomp ON nl.asociado_comercial_comprador = uaccomp.usuario\n    LEFT JOIN cotiz_uniq AS cd_cotizaciones ON n.id = cd_cotizaciones.lote_nro\n    LEFT JOIN dcac.usuarios AS uc ON n.comprado_por = uc.usuario\n    LEFT JOIN ib_neg_uniq AS nc ON n.id = nc.negocio \n    LEFT JOIN (SELECT * FROM negocios.compra_inmediata_faena LIMIT 1 BY negocio) AS ci ON n.id = ci.negocio AND toString(ci.comprada) = '1'\n    LEFT JOIN dcac.usuarios AS us_o ON n.generado_por = us_o.usuario AND toString(us_o.perfil) = '3' \n    LEFT JOIN (SELECT * FROM negocios.cd_logs_estado LIMIT 1 BY cd_cotizacion_id) AS cdl ON cd_cotizaciones.id = cdl.cd_cotizacion_id AND toString(cdl.estado) = '1'\n    LEFT JOIN dcac.usuarios AS us_c ON cdl.usuario = us_c.usuario\n    LEFT JOIN negocios.frigorificos AS fri ON nl.frigorifico = fri.frigorifico\n    LEFT JOIN dcac.usuarios AS uop ON n.operador = uop.usuario\n    LEFT JOIN dcac.usuarios AS ucarga ON nl.operario_carga = ucarga.usuario\n    LEFT JOIN repre_vinc AS rv_vend ON n.sociedad_vendedora = rv_vend.id\n    LEFT JOIN repre_vinc AS rv_comp ON nl.sociedad_compradora = rv_comp.id\n    LEFT JOIN FechaFaenaReal AS ffr ON n.id = ffr.lo_negocio\n    LEFT JOIN Estados_FAE AS ef ON n.id = ef.ID_Negocio\n    LEFT JOIN Estados_MAG AS em ON n.id = em.ID_Negocio\n    LEFT JOIN aso_comercial AS ac_vend ON n.sociedad_vendedora = ac_vend.ID\n    LEFT JOIN aso_comercial AS ac_comp ON nl.sociedad_compradora = ac_comp.ID\n    \n    WHERE CASE \n            WHEN toString(n.mag) = '1' THEN toDateOrNull(toString(n.fecha_vendida))\n            WHEN ffr.lo_fecha_faena_real IS NULL THEN toDateOrNull(toString(nl.fecha_faena))\n            ELSE ffr.lo_fecha_faena_real\n          END >= '2026-01-01'\n    ORDER BY toFloat64OrZero(toString(nl.kg_salida_neto)) DESC\n    LIMIT 1 BY toInt64OrZero(toString(n.id))\n),\n\n-- =================================================================\n-- 6. INVERNADA FINAL\n-- =================================================================\ninvernada_final AS (\n    SELECT \n        toInt64OrZero(toString(r.revisacion)) AS ID,\n        toString(CASE WHEN ir.tipo_precio = 'BULTO' THEN 'CRIA' WHEN ir.tipo_precio = 'KILO' THEN 'INV' END) AS UN,\n        CASE WHEN toString(dc.fecha_carga_final) IN ('', '0000-00-00') OR dc.fecha_carga_final IS NULL THEN toDateOrNull(toString(dc.fecha_carga)) ELSE toDateOrNull(toString(dc.fecha_carga_final)) END AS fecha_operacion,\n        toInt32OrZero(toString(toMonth(CASE WHEN toString(dc.fecha_carga_final) IN ('', '0000-00-00') OR dc.fecha_carga_final IS NULL THEN toDateOrNull(toString(dc.fecha_carga)) ELSE toDateOrNull(toString(dc.fecha_carga_final)) END))) AS mes_operacion,\n        toInt32OrZero(toString(toYear(CASE WHEN toString(dc.fecha_carga_final) IN ('', '0000-00-00') OR dc.fecha_carga_final IS NULL THEN toDateOrNull(toString(dc.fecha_carga)) ELSE toDateOrNull(toString(dc.fecha_carga_final)) END))) AS anio_operacion,\n        toString(stvend.razon_social) AS RS_Vendedora,\n        toString(if(concat(uacvend.nombre, ' ', uacvend.apellido) = '' OR uacvend.nombre IS NULL, ac_vend.asoc_com, concat(uacvend.nombre, ' ', uacvend.apellido))) AS asoc_com_vend,\n        toString(stcomp.razon_social) AS RS_Compradora, \n        toString(if(concat(uaccomp.nombre, ' ', uaccomp.apellido) = '' OR uaccomp.nombre IS NULL, ac_comp.asoc_com, concat(uaccomp.nombre, ' ', uaccomp.apellido))) AS asoc_com_compra,\n        toFloat64OrZero(toString(CASE WHEN toFloat64OrZero(toString(dc.cantidad_animales)) = 0 THEN toString(r.cantidad) ELSE toString(dc.cantidad_animales) END)) AS Q,\n        \n        \n        toString(ei.ESTADOS_Invernada) AS Estado,\n        \n        toString(CASE WHEN concat(uop.nombre, ' ', uop.apellido) = 'Andres Moronell' THEN 'AM' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Benjamin Guiraldes' THEN 'BG' WHEN concat(uop.nombre, ' ', uop.apellido) LIKE 'Ignacio Diez Pe_a' THEN 'IDP' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Pedro Hita' THEN 'PH' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Pedro De Hagen' THEN 'PdH' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Maximiliano Oliveri' THEN 'MO' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Santiago Busquet' THEN 'SB' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Segundo Guevara' THEN 'SG' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Alberto Pedro Bernaudo' THEN 'AB' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Facundo Martin' THEN 'FM' WHEN concat(uop.nombre, ' ', uop.apellido) = 'Gonzalo Haedo' THEN 'GH' ELSE concat(uop.nombre, ' ', uop.apellido) END) AS Operador,\n        \n        toString(estabcomp.nombre) AS Frigorif_Establ_Comprador,\n        toDateOrNull(CASE WHEN toString(dc.fecha_carga_final) IN ('', '0000-00-00') OR dc.fecha_carga_final IS NULL THEN toString(dc.fecha_carga) ELSE toString(dc.fecha_carga_final) END) AS fecha_carga,\n        '' AS Fecha_Faena,\n        toInt64OrNull(toString(stvend.cuit)) AS cuit_vend,\n        toInt64OrNull(toString(stcomp.cuit)) AS cuit_comp,\n        toString(concat(ucarga.nombre, ' ', ucarga.apellido)) AS op_carga,\n        toFloat64OrZero(toString(CASE\n            WHEN upper(trim(ei.ESTADOS_Invernada)) IN ('TROPAS CARGADAS', 'TROPAS A CARGAR', 'CARGADAS', 'A CARGAR') AND toFloat64OrZero(toString(arp.rendimiento_proyectado)) != 0 THEN toFloat64OrZero(toString(arp.rendimiento_proyectado))/100\n            WHEN upper(trim(ei.ESTADOS_Invernada)) IN ('FAENADAS', 'LIQUIDADAS', 'TROPAS A LIQUIDAR', 'CERRADAS', 'PAGOS VENCIDOS') AND toFloat64OrZero(toString(ar.rendimiento_final)) != 0 THEN toFloat64OrZero(toString(ar.rendimiento_final))/100\n            WHEN toFloat64OrZero(toString(ar.rendimiento_real_total)) != 0 THEN toFloat64OrZero(toString(ar.rendimiento_real_total))/100\n            WHEN toFloat64OrZero(toString(ar.rendimiento_final)) != 0 THEN toFloat64OrZero(toString(ar.rendimiento_final))/100\n            WHEN toFloat64OrZero(toString(arp.rendimiento_proyectado)) != 0 THEN toFloat64OrZero(toString(arp.rendimiento_proyectado))/100\n            WHEN toFloat64OrZero(toString(arp.rendimiento_final)) != 0 THEN toFloat64OrZero(toString(arp.rendimiento_final))/100\n            ELSE 0\n        END)) AS rend,\n        toString(coalesce(nullIf(concat(u_rep_vend.nombre, ' ', u_rep_vend.apellido), ''), rv_vend.representante)) AS repre_vendedor,\n        toString(coalesce(nullIf(concat(u_rep_comp.nombre, ' ', u_rep_comp.apellido), ''), rv_comp.representante)) AS repre_comprador\n\n    FROM invernada_base AS r\n    LEFT JOIN dc_uniq AS dc ON r.revisacion = dc.revisacion\n    LEFT JOIN dcac.sociedades_tags AS stvend ON r.sociedad_vendedora = stvend.id\n    LEFT JOIN lxi_uniq AS lxi ON r.revisacion = lxi.revisacion\n    LEFT JOIN dcac.sociedades_tags AS stcomp ON lxi.sociedad_compradora = stcomp.id\n    LEFT JOIN ar_rev_uniq AS ar ON r.revisacion = ar.revisacion\n    LEFT JOIN arp_rev_uniq AS arp ON r.revisacion = arp.revisacion\n    LEFT JOIN dcac.usuarios AS acsv ON stvend.asociado_comercial = acsv.usuario\n    LEFT JOIN dcac.usuarios AS uacvend ON r.asociado_comercial = uacvend.usuario\n    LEFT JOIN dcac.usuarios AS acsc ON stcomp.asociado_comercial = acsc.usuario\n    LEFT JOIN dcac.usuarios AS uaccomp ON lxi.asociado_comercial_comprador = uaccomp.usuario\n    LEFT JOIN cotiz_uniq AS cd_cotizaciones ON r.revisacion = cd_cotizaciones.lote_nro\n    LEFT JOIN ir_uniq AS ir ON r.revisacion = ir.revisacion\n    LEFT JOIN dcac.usuarios AS uc ON r.comprado_por = uc.usuario\n    LEFT JOIN ib_rev_uniq AS nc ON r.revisacion = nc.revisacion \n    LEFT JOIN dcac.establecimientos AS estabcomp ON lxi.establecimiento_comprador = estabcomp.establecimiento\n    LEFT JOIN dcac.usuarios AS uop ON r.adm_solicitud = uop.usuario\n    LEFT JOIN aso_comercial AS ac_vend ON r.sociedad_vendedora = ac_vend.ID\n    LEFT JOIN aso_comercial AS ac_comp ON lxi.sociedad_compradora = ac_comp.ID\n    LEFT JOIN repre_vinc AS rv_vend ON r.sociedad_vendedora = rv_vend.id\n    LEFT JOIN repre_vinc AS rv_comp ON lxi.sociedad_compradora = rv_comp.id\n    LEFT JOIN dcac.usuarios AS u_rep_vend ON r.representante = u_rep_vend.usuario\n    LEFT JOIN dcac.usuarios AS u_rep_comp ON lxi.representante_de_compra = u_rep_comp.usuario\n    LEFT JOIN cte_estados_inv AS ei ON r.revisacion = ei.ID_Revisacion\n    LEFT JOIN dcac.usuarios AS ucarga ON dc.operario_carga = ucarga.usuario\n    \n    WHERE CASE \n            WHEN toString(dc.fecha_carga_final) IN ('', '0000-00-00') OR dc.fecha_carga_final IS NULL THEN toDateOrNull(toString(dc.fecha_carga))\n            ELSE toDateOrNull(toString(dc.fecha_carga_final))\n          END >= '2026-01-01'\n    ORDER BY toFloat64OrZero(toString(dc.peso_neto)) DESC\n    LIMIT 1 BY toInt64OrZero(toString(r.revisacion))\n)\n\n-- =================================================================\n-- 7. UNION FINAL \n-- =================================================================\nSELECT * FROM (\n    SELECT * FROM faena_final\n    UNION ALL\n    SELECT * FROM invernada_final\n)\nORDER BY ID DESC;\n"
+      }
+    ]
+  },
+  "id": 102,
+  "legacy_query": null,
+  "parameter_mappings": [],
+  "can_manage_db": true,
+  "display": "table",
+  "archived_directly": false,
+  "entity_id": "apu_OSo14FEIN650lfe9G",
+  "param_fields": {},
+  "collection_preview": true,
+  "last-edit-info": {
+    "id": 13371359,
+    "email": "api-key-user-daff4313-4bd1-45ca-a9f9-3fc0e0d2ed02@api-key.invalid",
+    "first_name": "Desarrollo_ComercialJS",
+    "last_name": "",
+    "timestamp": "2026-04-30T13:40:20Z"
+  },
+  "visualization_settings": {
+    "table.pivot_column": "asoc_com_vend",
+    "table.cell_column": "mes_operacion"
+  },
+  "collection": {
+    "authority_level": null,
+    "description": null,
+    "archived": false,
+    "workspace_id": null,
+    "slug": "coleccion_personal_de_juan_sineriz",
+    "archive_operation_id": null,
+    "name": "Colección Personal de Juan Siñeriz",
+    "is_remote_synced": false,
+    "personal_owner_id": 13371347,
+    "type": null,
+    "is_sample": false,
+    "id": 18,
+    "archived_directly": null,
+    "entity_id": "KcvDDkARyxjotb5dcwVCR",
+    "location": "/",
+    "namespace": null,
+    "is_personal": true,
+    "created_at": "2026-03-09T16:04:12.430367Z"
+  },
+  "metabase_version": "v0.58.1 (7fbf305)",
+  "parameters": [],
+  "dashboard_id": null,
+  "created_at": "2026-03-13T10:52:40.188538Z",
+  "parameter_usage_count": 0,
+  "public_uuid": "41d53356-0ff0-4ccc-b81c-45db6982af5d",
+  "can_delete": false
+}

@@ -364,6 +364,7 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     qPart: oMap['q_particular'] ?? oMap['q particular'] ?? 16,
     rend: oMap['rend'] ?? oMap['rendimiento'] ?? 25,
     est: oMap['estado'] ?? 10,
+    estSimp: oMap['estado_simplificado'] ?? 21,
   };
   console.log('[logic] OPS (Q102): headers=', metaOps.headers, '| filas=', (metaOps.rows || []).length, '| idxO=', idxO);
   (metaOps.rows || []).forEach(row => {
@@ -371,8 +372,10 @@ async function _processLoadData(metaBase, metaOps, comsRaw, agendasRaw, leadsRaw
     const rV = norm(g(row, idxO.rV)), rC = norm(g(row, idxO.rC));
     if (!aV && !aC && !rV && !rC) return;
     const f = toDateStr(g(row, idxO.f)); if (!f) return;
-    const est = String(g(row, idxO.est) || '').trim().toUpperCase();
-    if (est === '0' || est === '' || est === 'OFRECIMIENTOS' || est === 'PUBLICADAS' || est === 'NO CONCRETADAS' || est === 'BAJA') return;
+    // Usar estado_simplificado (columna nueva en Q102) para clasificar limpiamente todos los tipos
+    const estSimp = String(g(row, idxO.estSimp) || '').trim().toLowerCase();
+    if (estSimp !== 'concretada') return;
+
 
     const cargAcRaw = String(g(row, idxO.cargAc) || '').trim();
     const cargF = g(row, idxO.cargF) ? toDateStr(g(row, idxO.cargF)) : '';
@@ -524,7 +527,9 @@ function scheduledWarmup() {
   console.log('[logic] scheduledWarmup: solo flush de memoria (disk cache preservado).');
   // Solo borra memoria — el disco cache de 12h se respeta
   _flushMemoryOnly();
-  warmup().then(() => console.log('[logic] scheduledWarmup: caché actualizada.'));
+  warmup()
+    .then(() => console.log('[logic] scheduledWarmup: caché actualizada.'))
+    .catch(e => console.error('[logic] scheduledWarmup: error (se reintentará en el próximo ciclo):', e.message));
   return { ok: true };
 }
 
